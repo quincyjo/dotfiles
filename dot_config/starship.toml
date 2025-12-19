@@ -1,0 +1,289 @@
+"$schema" = 'https://starship.rs/config-schema.json'
+
+format = """
+[](color_yellow)\
+$os\
+[](fg:color_yellow bg:color_bg3)\
+$username\
+[](bg:color_bg1 fg:color_bg3)\
+$directory\
+$git_branch\
+$git_status\
+$git_state\
+$git_metrics\
+$c\
+$cpp\
+$rust\
+$golang\
+$nodejs\
+$php\
+$scala\
+$java\
+$kotlin\
+$haskell\
+$python\
+$lua\
+$docker_context\
+$conda\
+$pixi\
+[](fg:color_bg1)\
+$fill\
+$status\
+$cmd_duration\
+$line_break$character"""
+
+# monokai and monokai_pro are true color palettes.
+# Set to 'terminal' to let your terminal emulator handle colors.
+# Or use 'terminal_bright' for the bright color terminal colors.
+palette = 'terminal'
+
+[palettes.monokai]
+color_red = '#F92672'
+color_orange = '#FD971F'
+color_yellow = '#E6DB74'
+color_green = '#A6E22E'
+color_blue = '#66D9EF'
+color_purple = '#AE81FF'
+color_bg1 = '#272822'
+color_fg0 = '#F8F8F2'
+color_bg3 = '#49483E'
+
+[palettes.terminal]
+color_red = '1'
+color_orange = '11'
+color_yellow = '3'
+color_green = '2'
+color_blue = '4'
+color_purple = '5'
+color_bg1 = '0' # '#272822'
+color_fg0 = '7' # '#F8F8F2'
+color_bg3 = '8' # '#49483E'
+
+[palettes.terminal_bright]
+color_red = '9'
+color_orange = '3'
+color_yellow = '11'
+color_green = '10'
+color_blue = '12'
+color_purple = '13'
+color_bg1 = '#272822'
+color_fg0 = '#F8F8F2'
+color_bg3 = '#49483E'
+
+[palettes.monokai_pro]
+color_red = '#FF6188'
+color_orange = '#FC9867'
+color_yellow = '#FFD866'
+color_green = '#A9DC76'
+color_blue = '#78DCE8'
+color_purple = '#AB9DF2'
+color_fg0 = '#F8F8F2'
+color_bg1 = '#2D2A2E'
+color_bg3 = '#444155'
+
+[os]
+disabled = false
+style = "bg:color_yellow fg:color_bg1"
+format = '[ $symbol ]($style)'
+
+[os.symbols]
+Windows = "󰍲"
+Ubuntu = "󰕈"
+SUSE = ""
+Raspbian = ""
+Mint = ""
+Macos = "󰀵"
+Manjaro = ""
+Linux = ""
+Gentoo = ""
+Fedora = ""
+Alpine = ""
+Amazon = ""
+Android = ""
+AOSC = ""
+Arch = "󰣇"
+Artix = "󰣇"
+EndeavourOS = ""
+CentOS = ""
+Debian = ""
+Redhat = "󱄛"
+RedHatEnterprise = "󱄛"
+Pop = ""
+
+[username]
+show_always = true
+style_user = "bold bg:color_bg3 fg:color_yellow"
+style_root = "bold bg:color_bg3 fg:color_yellow"
+format = '[ $user ]($style)'
+
+[sudo]
+disabled = true
+style = "bold bg:color_yellow fg:color_bg1"
+format = '[$symbol]($style)'
+symbol = '\$'
+
+[directory]
+style = "fg:color_yellow bg:color_bg1"
+format = "[ $path ]($style)"
+truncation_length = 3
+truncation_symbol = "…/"
+
+[directory.substitutions]
+"Documents" = "󰈙 "
+"Downloads" = " "
+"Music" = "󰝚 "
+"Pictures" = " "
+"Developer" = "󰲋 "
+
+[git_branch]
+symbol = ""
+style = "fg:color_blue bg:color_bg1"
+format = '[ $symbol $branch]($style)'
+
+#  this icon makes the prompt truncate for some reason... 󱢒
+[git_status]
+disabled = false
+style = "fg:color_blue bg:color_bg1"
+format = '[ $all_status$ahead_behind ]($style)'
+ahead = '[](fg:color_green bg:color_bg1)'
+up_to_date = '[✔](fg:color_green bg:color_bg1)'
+behind = ''
+conflicted = '[](fg:color_red bg:color_bg1)'
+diverged = '[](fg:color_red bg:color_bg1)'
+untracked = '?'
+modified = '[✎](fg:color_orange bg:color_bg1)'
+staged = '[+](fg:color_green bg:color_bg1)'
+renamed = '[»](fg:color_purple bg:color_bg1)'
+deleted = '[](fg:color_red bg:color_bg1)'
+stashed = ''
+
+[git_state]
+disabled = false
+
+[git_metrics]
+disabled = true
+added_style = "fg:color_green bg:color_bg1"
+deleted_style = "fg:color_red bg:color_bg1"
+format = '[([+$added]($added_style) )([-$deleted]($deleted_style)) ](bg:color_bg1)'	
+
+[nodejs]
+symbol = ""
+style = "fg:color_blue bg:color_bg1"
+format = '[ $symbol( $version) ]($style)'
+
+[c]
+symbol = ""
+style = "fg:color_purple bg:color_bg1"
+format = '[ $symbol( $version) ]($style)'
+
+[cpp]
+symbol = ""
+style = "fg:color_purple bg:color_bg1"
+format = '[ $symbol( $version) ]($style)'
+
+[rust]
+symbol = ""
+style = "fg:color_purple bg:color_bg1"
+format = '[ $symbol( $version) ]($style)'
+
+[golang]
+symbol = ""
+style = "fg:color_purple bg:color_bg1"
+format = '[ $symbol( $version) ]($style)'
+
+[php]
+symbol = ""
+style = "fg:color_purple bg:color_bg1"
+format = '[ $symbol( $version) ]($style)'
+
+[java]
+symbol = ""
+style = "fg:color_purple bg:color_bg1"
+format = '[ [$symbol](fg:color_blue bg:color_bg1)( $version) ]($style)'
+detect_files = ['pom.xml', 'build.gradle.kts', '.java-version', 'deps.edn', 'project.clj', 'build.boot', '.sdkmanrc']
+
+[scala]
+symbol = ""
+style = "fg:color_purple bg:color_bg1"
+format = '[ [$symbol](fg:color_red bg:color_bg1)( $version) ]($style)'
+
+[kotlin]
+symbol = ""
+style = "fg:color_purple bg:color_bg1"
+format = '[ $symbol( $version) ]($style)'
+
+[haskell]
+symbol = ""
+style = "fg:color_purple bg:color_bg1"
+format = '[ $symbol( $version) ]($style)'
+
+[python]
+symbol = ""
+style = "fg:color_purple bg:color_bg1"
+format = '[ $symbol( $version) ]($style)'
+
+[lua]
+symbol = "󰢱"
+style = "fg:color_purple bg:color_bg1"
+format = '[ $symbol( $version) ]($style)'
+
+[docker_context]
+symbol = ""
+style = "bg:color_bg3"
+format = '[[ $symbol( $context) ](fg:#83a598 bg:color_bg3)]($style)'
+
+[conda]
+style = "bg:color_bg3"
+format = '[[ $symbol( $environment) ](fg:#83a598 bg:color_bg3)]($style)'
+
+[pixi]
+style = "bg:color_bg3"
+
+
+[time]
+disabled = true
+time_format = "%R"
+style = "bg:color_bg1"
+format = '[[  $time ](fg:color_fg0 bg:color_bg1)]($style)'
+
+[status]
+disabled = false
+symbol = ""
+not_executable_symbol = ""
+not_found_symbol = "󱈍"
+sigint_symbol = ""
+signal_symbol = ""
+style = "bold bg:color_bg3 fg:color_fg0"
+# success_style = "bold bg:color_bg3 fg:color_green"
+# failure_style = "bold bg:color_bg3 fg:color_red"
+success_style = "bold bg:color_red fg:color_yellow"
+failure_style = "bold bg:color_red fg:color_yellow"
+format = """
+[](fg:color_red)\
+[ $common_meaning$signal_name$maybe_int $symbol ]($style)\
+[](fg:color_red)"""
+
+[cmd_duration]
+disabled = false
+style = "bg:color_bg3 fg:color_fg0"
+format = """
+[](fg:color_bg3)\
+[ $duration ]($style)\
+[](fg:color_bg3)\
+"""
+
+[line_break]
+disabled = false
+
+[fill]
+disabled = false
+symbol = "·"
+
+[character]
+disabled = false
+success_symbol = '[❯](bold fg:color_green)'
+error_symbol = '[❯](bold fg:color_red)'
+vimcmd_symbol = '[N](bold fg:color_yellow)'
+vimcmd_replace_one_symbol = '[r](bold fg:color_red)'
+vimcmd_replace_symbol = '[R](bold fg:color_red)'
+vimcmd_visual_symbol = '[V](bold fg:color_purple)'

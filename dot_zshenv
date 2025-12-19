@@ -1,0 +1,31 @@
+eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+
+source "$HOME/.config/env/themes/terminal-16.sh"
+
+# Setup directory preview.
+if command -v eza &>/dev/null; then
+  export COLUMNS=120
+  export EZA_GRID_ROWS=10
+  export DIRECTORY_PREVIEW="eza -1 --tree --level=3 --color=always --group-directories-last"
+else
+  export DIRECTORY_PREVIEW="ls -1 --color=always"
+fi
+
+# Setup file preview
+if command -v bat &>/dev/null; then
+  export BAT_THEME="base16"
+  export FILE_PREVIEW="bat --style=numbers --color=always --line-range :500"
+else
+  export FILE_PREVIEW="head"
+fi
+
+# nvim as editor
+if command -v nvim &>/dev/null; then
+  export EDITOR='nvim'
+fi
+
+# If fzf locally installed, ensure the local installation is on the path.
+if [[ -d ~/.fzf/bin && ! "$PATH" == *$HOME/.fzf/bin* ]]; then
+  export PATH="${PATH:+${PATH}:}$HOME/.fzf/bin"
+fi
+
