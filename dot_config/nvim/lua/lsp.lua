@@ -7,7 +7,6 @@ vim.g.inlay_hints = false
 ---@param client vim.lsp.Client
 ---@param bufnr integer
 local function on_attach(client, bufnr)
-
     ---@param lhs string
     ---@param rhs string|function
     ---@param opts string|vim.keymap.set.Opts
@@ -41,30 +40,30 @@ local function on_attach(client, bufnr)
     -- Nvim native diagnostic list
     keymap("<leader>aa",
         vim.diagnostic.setqflist,
-    'All workspace diagnostics')
+        'All workspace diagnostics')
     keymap("<leader>ae", function()
-            vim.diagnostic.setqflist({ severity = vim.diagnostic.severity.ERROR })
+        vim.diagnostic.setqflist({ severity = vim.diagnostic.severity.ERROR })
     end, 'All workspace errors')
     keymap("<leader>aw", function()
         vim.diagnostic.setqflist({ severity = vim.diagnostic.severity.WARN })
     end, 'All workspace warnings')
     keymap("<leader>d",
         vim.diagnostic.setloclist,
-    'Buffer diagnostics')
+        'Buffer diagnostics')
 
     if client:supports_method 'textDocument/codeAction' then
         require('lightbulb').attach_lightbulb(bufnr, client)
     end
 
     -- Show diagnostics on cursor hold
-    vim.api.nvim_create_autocmd({"CursorHold"}, {
-      pattern = "*",
-      callback = function()
-        vim.diagnostic.open_float({
-          focusable = false,
-          close_events = { "CursorMoved", "CursorMovedI", "BufHidden", "InsertCharPre", "WinLeave" }
-        })
-      end
+    vim.api.nvim_create_autocmd({ "CursorHold" }, {
+        pattern = "*",
+        callback = function()
+            vim.diagnostic.open_float({
+                focusable = false,
+                close_events = { "CursorMoved", "CursorMovedI", "BufHidden", "InsertCharPre", "WinLeave" }
+            })
+        end
     })
 
     -- Don't check for the capability here to allow dynamic registration of the request.
@@ -235,7 +234,7 @@ vim.diagnostic.config {
             if total > 1 then
                 if i == 1 then
                     local prefix = {}
-                    local all_diagnostics = vim.diagnostic.get(0, { lnum = diagnostic.lnum})
+                    local all_diagnostics = vim.diagnostic.get(0, { lnum = diagnostic.lnum })
                     local severity_counts = {}
                     for _, d in pairs(all_diagnostics) do
                         severity_counts[d.severity] = (severity_counts[d.severity] or 0) + 1
@@ -257,7 +256,7 @@ vim.diagnostic.config {
                     return diagnostic.message
                 end
                 return string.format('[%s]', diagnostic.code)
-            -- Else show message truncated.
+                -- Else show message truncated.
             else
                 -- Take the first line, reduce dot chains, and truncate length to a
                 -- reasonable length with ellipsis if needed.
@@ -369,4 +368,3 @@ vim.api.nvim_create_autocmd({ 'BufReadPre', 'BufNewFile' }, {
     end,
 })
 ]]
-

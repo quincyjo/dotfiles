@@ -113,7 +113,7 @@ local function get_parts(bufnr)
     end
     if prefix ~= '' then
         path = string.sub(path, #prefix_path + 1)
-        -- If in projects directory, use the sub directory if it exists.
+        -- If prefix is transparent, use the sub directory if it exists.
         if prefix_options.transparent and #path > 0 then
             local sub_dir = path:match('/[^/]*')
             path          = string.sub(path, #sub_dir + 1)
@@ -289,9 +289,7 @@ local function build(win, bufnr, parts, separator, available, is_active, is_help
         })
     end
 
-    bread_crumbs = vim.iter(bread_crumbs):rev():totable()
-    local path = table.concat(
-        bread_crumbs,
+    local path = vim.iter(bread_crumbs):rev():join(
         (is_active and '%#WinBarSeparator#' or '%#WinBarNC#') .. separator
     )
 

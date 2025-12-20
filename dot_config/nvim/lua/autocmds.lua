@@ -13,7 +13,7 @@ vim.api.nvim_create_autocmd('FileType', {
     end,
 })
 
-local line_numbers_group = vim.api.nvim_create_augroup('quincyjo/toggle_line_numbers', {})
+local line_numbers_group = vim.api.nvim_create_augroup('quincyjo/toggle_relative_line_numbers', {})
 vim.api.nvim_create_autocmd({ 'BufEnter', 'FocusGained', 'InsertLeave', 'CmdlineLeave', 'WinEnter' }, {
     group = line_numbers_group,
     desc = 'Toggle relative line numbers on',

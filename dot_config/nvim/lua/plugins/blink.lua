@@ -3,7 +3,6 @@ return {
         'saghen/blink.cmp',
         -- optional: provides snippets for the snippet source
         -- dependencies = { 'rafamadriz/friendly-snippets' },
-        -- dependencies = { 'L3MON4D3/LuaSnip', version = 'v2.*' },
         dependencies = {
             'Exafunction/windsurf.nvim',
             'LuaSnip'
@@ -18,13 +17,14 @@ return {
                 ['<CR>'] = { 'accept', 'fallback' },
                 ['<C-\\>'] = { 'hide', 'fallback' },
                 ['<C-n>'] = { 'select_next', 'show' },
-                -- ['<Tab>'] = { 'select_next', 'snippet_forward', 'fallback' },
                 ['<C-p>'] = { 'select_prev' },
                 ['<C-b>'] = { 'scroll_documentation_up', 'fallback' },
                 ['<C-f>'] = { 'scroll_documentation_down', 'fallback' },
             },
             appearance = {
                 kind_icons = require('icons').symbol_kinds,
+                nerd_font_variant = 'mono',
+
             },
             completion = {
                 documentation = { auto_show = true },
@@ -46,9 +46,13 @@ return {
                     codeium = { name = 'Codeium', module = 'codeium.blink', async = true },
                 },
                 per_filetype = {
+                    oil = { 'path', 'buffer' },
                     codecompanion = { 'codecompanion' },
                 },
             },
+            -- See :h blink-cmp-config-fuzzy for more information
+            fuzzy = { implementation = 'prefer_rust_with_warning' },
+            signature = { enabled = true },
         },
     },
 }

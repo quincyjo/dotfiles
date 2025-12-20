@@ -57,10 +57,10 @@ local colors = {
     nontext = p.bg_3,
     selection = p.fg_2,
     transparent_black = p.bg_2,
-    transparent_red = hp.blend(p.red, 0.1, p.bg),
-    transparent_green = hp.blend(p.green, 0.1, p.bg),
-    transparent_yellow = hp.blend(p.yellow, 0.1, p.bg),
-    transparent_blue = hp.blend(p.blue, 0.1, p.bg),
+    transparent_red = hp.blend(p.red, 0.15, p.bg),
+    transparent_green = hp.blend(p.green, 0.15, p.bg),
+    transparent_yellow = hp.blend(p.yellow, 0.15, p.bg),
+    transparent_blue = hp.blend(p.blue, 0.15, p.bg),
     visual = p.bg_3,
     white = p.white,
 }
@@ -113,6 +113,32 @@ statusline_groups = vim.tbl_extend('error', statusline_groups, {
     StatusLineTitle = { fg = colors.bright_white, bold = true },
     StatusLineFilename = { fg = colors.bright_white },
 })
+
+--[[ Highlights are added after colorscheme, so need to figure this out.
+local function get_highlights_by_pattern(pattern)
+    local matching_groups = {}
+    local ok, all_groups = pcall(vim.api.nvim_get_hl, 0, {})
+    if not ok then
+        return matching_groups
+    end
+    for group_name, opts in pairs(all_groups) do
+        if group_name:match(pattern) then
+            matching_groups[group_name] = opts
+        end
+    end
+
+    return matching_groups
+end
+
+vim.tbl_extend('error', statusline_groups,
+    vim.iter(get_highlights_by_pattern('^BufferLine.*Selected'))
+    :map(function(group, opts)
+        opts.bg = colors.transparent_black
+        return group, opts
+    end)
+    :totable()
+)
+]]
 
 ---@type table<string, vim.api.keyset.highlight>
 local groups = vim.tbl_extend('error', statusline_groups, {
@@ -295,9 +321,9 @@ local groups = vim.tbl_extend('error', statusline_groups, {
     LspCodeLens = { fg = colors.cyan, underline = true },
     LspFloatWinBorder = { fg = colors.comment },
     LspInlayHint = { fg = colors.nontext, italic = true },
-    LspReferenceRead = { bg = colors.transparent_blue },
+    LspReferenceRead = { bg = colors.transparent_blue }, --, sp = colors.blue, underline = true },
     LspReferenceText = {},
-    LspReferenceWrite = { bg = colors.transparent_red },
+    LspReferenceWrite = { bg = colors.transparent_red }, -- sp = colors.red, underline = true },
     LspSignatureActiveParameter = { bold = true, underline = true, sp = colors.fg },
 
     -- Neominimap:
@@ -375,14 +401,14 @@ local groups = vim.tbl_extend('error', statusline_groups, {
     WinBarDoc = { fg = colors.blue, italic = true },
     WinBarCodeCompanion = { fg = colors.pink },
     WinBarTarget = { fg = colors.bright_purple, bold = true },
-    WinBarTargetDirty = { fg = colors.bright_yellow, bold = true },
+    WinBarTargetDirty = { fg = colors.yellow, bold = true },
     WinBarTargetModified = { fg = colors.orange, bold = true },
     WinBarTargetError = { fg = colors.red, bold = true },
     WinBarSeparator = { fg = colors.green },
-    WinBarNC = { bg = colors.bg, fg = colors.selection, sp = colors.selection, underline = true },
+    WinBarNC = { bg = colors.bg, fg = colors.selection, sp = colors.bg_3, underline = true },
     WinBarDirNC = { fg = colors.selection, italic = true },
-    WinBarTargetNC = { fg = colors.purple, bold = true },
-    WinbarModeHighlightNC = { fg = colors.bg_3 },
+    WinBarTargetNC = { fg = colors.purple, bold = false },
+    WinBarModeHighlightNC = { fg = colors.bg_3 },
 
     -- Windows.
     WinSeparator = { bg = colors.bg, fg = colors.black },
@@ -404,10 +430,15 @@ local groups = vim.tbl_extend('error', statusline_groups, {
     IblIndent = { fg = colors.bg_3 },
 
     -- Bufferline.
-    BufferLineBufferSelected = { bg = colors.bg, sp = colors.purple },
+    BufferLineBufferSelected = { bg = colors.transparent_black, sp = colors.purple },
+    BufferLineTabSelected = { bg = colors.transparent_black, sp = colors.purple },
+    BufferLineCloseButtonSelected = { bg = colors.transparent_black, fg = colors.purple },
+    BufferLineIndicatorSelected = { bg = colors.transparent_black, fg = colors.purple },
+    BufferLineDevIconLuaSelected = { bg = colors.transparent_black, fg = colors.blue },
     BufferLineFileIcon = { bg = colors.bg },
-    BufferLineFill = { bg = colors.bg },
+    BufferLineFill = { bg = colors.bg, underline = true, sp = colors.black },
     TabLineSel = { bg = colors.purple },
+
 
     -- When triggering flash, use a white font and make everything in the backdrop italic.
     FlashBackdrop = { italic = true },
@@ -455,6 +486,9 @@ local groups = vim.tbl_extend('error', statusline_groups, {
 
     -- CodeCompanion.
     CodeCompanionInlineDiffHint = { link = 'LspCodeLens' },
+
+    -- Windsurf
+    CodeiumSuggestion = { fg = colors.selection },
 })
 
 for group, opts in pairs(groups) do

@@ -4,6 +4,11 @@ return {
     ---@module "ibl"
     ---@type ibl.config
     opts = {
+        exclude = {
+            filetypes = {
+                "markdown",
+            },
+        },
         scope = {
             highlight = {
                 'RainbowDelimiterRed',

@@ -2,7 +2,7 @@ set background=dark
 
 hi clear
 
-let g:colors_name = 'ansi'
+let g:colors_name = 'qubit'
 set notermguicolors
 
 " This color scheme relies on ANSI colors only. It automatically inherits

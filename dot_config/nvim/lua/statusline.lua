@@ -235,12 +235,12 @@ function M.search_component()
         require('icons').misc.search,
         ' %#StatusLineItalic#/',
         search_term,
-        ' %#WinBar#[',
+        ' %#StatusLine#[',
         '%#StatusLineTitle#',
         result.current,
         '%#StatusLineItalic#/',
         denominator,
-        '%#WinBar#]',
+        '%#StatusLine#]',
     }
 end
 
