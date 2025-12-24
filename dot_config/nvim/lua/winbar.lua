@@ -40,7 +40,7 @@ local Options = {
 ---@field prefix? string The unstyled prefix for the buffer, if any.
 ---@field target? string The unstyled target for the buffer, if any.
 
--- Cache of path tokens per buffer.
+---Cache of path tokens per buffer.
 ---@type table<integer, Breadcrumb_Parts>
 local cache = {}
 
@@ -52,7 +52,7 @@ local cache = {}
 ---@field truncated integer The number of tokens truncated.
 ---@field display_width integer The display width of the cached path.
 
--- Cache of window rendered breadcrumbs.
+---Cache of window rendered breadcrumbs.
 ---@type table<integer, Window_State>
 local window_cache = {}
 
@@ -65,8 +65,8 @@ local function is_new_file()
         and vim.fn.filereadable(filename) == 0
 end
 
--- Adopted from lualine filename componenet
--- Builds a target suffix for the buffer state, eg [+,New]
+---Adopted from lualine filename componenet
+---Builds a target suffix for the buffer state, eg [+,New]
 ---@return string | nil
 local function get_symbols()
     if not Options.buffer_symbols then
@@ -87,9 +87,9 @@ local function get_symbols()
     return (#symbols > 0 and '[' .. table.concat(symbols, ',') .. ']' or nil)
 end
 
--- Gets the breadcrumb parts for the current buffer.
--- If it is cached, the cached value is immediately returned,
--- else it builds them and adds them to the cache.
+---Gets the breadcrumb parts for the current buffer.
+---If it is cached, the cached value is immediately returned,
+---else it builds them and adds them to the cache.
 ---@param bufnr integer The buffer to get parts for.
 ---@return Breadcrumb_Parts
 local function get_parts(bufnr)
@@ -144,7 +144,7 @@ local function get_parts(bufnr)
     return cache[bufnr]
 end
 
--- Formats the given target according to the buffer state.
+---Formats the given target according to the buffer state.
 ---@param bufnr integer
 ---@param target string | nil
 ---@param is_active boolean
@@ -185,8 +185,8 @@ local function get_target(bufnr, target, is_active, is_help, is_code_companion)
     return table.concat(target_parts, ' '), display_width
 end
 
--- Attempts to load the breadcrumbs for the given buffer for the target window
--- cache. If no cache is found or it is no longer valid, nil is returned.
+---Attempts to load the breadcrumbs for the given buffer for the target window
+---cache. If no cache is found or it is no longer valid, nil is returned.
 ---@param win integer The ID of the window.
 ---@param bufnr integer The ID of the buffer.
 ---@param separator string The seperator we are using.
@@ -218,10 +218,10 @@ local function load_from_window_catch(win, bufnr, separator, available, is_activ
     end
 end
 
--- Builds the breadcrumbs according to the target window and buffer with the
--- provided target. Applies truncation to make sure that the breadcrumbs
--- will fit in the target winbar. It will not be truncated more than prefix?,
--- context, target.
+---Builds the breadcrumbs according to the target window and buffer with the
+---provided target. Applies truncation to make sure that the breadcrumbs
+---will fit in the target winbar. It will not be truncated more than prefix?,
+---context, target.
 ---@param win integer Window id which we are building for.
 ---@param bufnr integer Buffer id which we are building for.
 ---@param parts Breadcrumb_Parts The breadcrumb parts for the buffer.
@@ -376,12 +376,12 @@ function M.setup(user_options)
         desc = 'Attach winbar',
         callback = function(args)
             if
-                (vim.bo[args.buf].buftype == ''                     -- Normal buffer
-                    and vim.api.nvim_buf_get_name(args.buf) ~= ''   -- Has a file name
-                    or vim.bo[args.buf].buftype == 'help'           -- Or is help buffer
-                    or vim.api.nvim_buf_get_name(args.buf):find('[CodeCompanion]')  -- Or is oil buffer
+                (vim.bo[args.buf].buftype == ''                                    -- Normal buffer
+                    and vim.api.nvim_buf_get_name(args.buf) ~= ''                  -- Has a file name
+                    or vim.bo[args.buf].buftype == 'help'                          -- Or is help buffer
+                    or vim.api.nvim_buf_get_name(args.buf):find('[CodeCompanion]') -- Or is oil buffer
                 )
-                and not vim.wo[0].diff                              -- Not in diff mode
+                and not vim.wo[0].diff                                             -- Not in diff mode
             then
                 vim.wo.winbar = "%{%v:lua.require'winbar'.render()%}"
             end

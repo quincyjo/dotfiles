@@ -219,6 +219,7 @@ local groups = vim.tbl_extend('error', statusline_groups, {
     ['@attribute'] = { fg = colors.cyan },
     ['@boolean'] = { fg = colors.purple },
     ['@character'] = { fg = colors.green },
+    ['@comment.documentation'] = { fg = colors.comment, italic = true, bold = true },
     ['@constant'] = { fg = colors.purple },
     ['@constant.builtin'] = { fg = colors.purple },
     ['@constant.macro'] = { fg = colors.cyan },
@@ -397,7 +398,7 @@ local groups = vim.tbl_extend('error', statusline_groups, {
 
     -- Winbar styling.
     WinBar = { bg = colors.transparent_black, fg = colors.fg, sp = colors.selection, underline = true },
-    WinBarDir = { fg = colors.purple, italic = true },
+    WinBarDir = { fg = colors.purple },
     WinBarDoc = { fg = colors.blue, italic = true },
     WinBarCodeCompanion = { fg = colors.pink },
     WinBarTarget = { fg = colors.bright_purple, bold = true },
@@ -406,7 +407,7 @@ local groups = vim.tbl_extend('error', statusline_groups, {
     WinBarTargetError = { fg = colors.red, bold = true },
     WinBarSeparator = { fg = colors.green },
     WinBarNC = { bg = colors.bg, fg = colors.selection, sp = colors.bg_3, underline = true },
-    WinBarDirNC = { fg = colors.selection, italic = true },
+    WinBarDirNC = { fg = colors.selection },
     WinBarTargetNC = { fg = colors.purple, bold = false },
     WinBarModeHighlightNC = { fg = colors.bg_3 },
 

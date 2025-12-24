@@ -1,11 +1,15 @@
 return {
+    -- not maintained
+    -- "norcalli/nvim-colorizer.lua",
     "catgoose/nvim-colorizer.lua",
     event = "BufReadPre",
-    --[[ not maintained
-    "norcalli/nvim-colorizer.lua",
-    event = "VeryLazy",
-    config = function()
-        require("colorizer").setup()
+    opts = {
+        user_default_options = {
+            names = false,
+            xterm = true,
+        },
+    },
+    config = function(_, opts)
+        require("colorizer").setup(opts)
     end,
-    ]]
 }
