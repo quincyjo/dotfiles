@@ -1,4 +1,6 @@
 return {
+    -- Disabled for now in favour of testing Kitty's native cursor trail.
+    enabled = false,
     "sphamba/smear-cursor.nvim",
     opts = {
         cursor_color = "#f83d19",
