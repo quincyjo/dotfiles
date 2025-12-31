@@ -10,7 +10,7 @@ return {
             extra = false,
         },
         options = {
-            mode = 'window',
+            mode = 'cursor',
             delay = 3,
             max_delta = {
                 time = 100,

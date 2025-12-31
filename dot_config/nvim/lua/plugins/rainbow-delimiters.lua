@@ -1,6 +1,6 @@
 return {
     "HiPhish/rainbow-delimiters.nvim",
-    opts = {
+    opts   = {
         strategy = {
             [''] = 'rainbow-delimiters.strategy.global',
             vim = 'rainbow-delimiters.strategy.local',
@@ -16,14 +16,14 @@ return {
         highlight = {
             'RainbowDelimiterRed',
             'RainbowDelimiterYellow',
-            'RainbowDelimiterBlue',
+            'RainbowDelimiterCyan',
             'RainbowDelimiterOrange',
             'RainbowDelimiterGreen',
             'RainbowDelimiterViolet',
-            'RainbowDelimiterCyan',
+            'RainbowDelimiterBlue',
         },
     },
-    config  = function(_, opts)
+    config = function(_, opts)
         require('rainbow-delimiters.setup').setup(opts)
     end,
 }

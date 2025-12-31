@@ -228,13 +228,8 @@ end
 ---@param separator string The separator we are using.
 ---@param available integer The available space to draw in.
 ---@param is_active boolean If the target window is the active window or not.
----@param is_help boolean If the target window is a help window.
 ---@return string
-local function build(win, bufnr, parts, separator, available, is_active, is_help)
-    -- Check if the buftype is 'help'
-    if is_help then
-        return ''
-    end
+local function build(win, bufnr, parts, separator, available, is_active)
     local separator_length = vim.fn.strdisplaywidth(separator)
     local used = 0
     local display_width = 0
@@ -245,7 +240,7 @@ local function build(win, bufnr, parts, separator, available, is_active, is_help
         display_width = used
     end
 
-    ---@type table<string>
+    ---@type string[]
     local bread_crumbs = {}
 
     -- Calculate the bread crumbs, truncated as needed.
@@ -345,7 +340,7 @@ function M.render()
         local available = vim.api.nvim_win_get_width(0) - 2 - highlight_width - target_display_width
         -- Load from the window cache if it exists and still is still viable.
         breadcrumbs = load_from_window_catch(win, bufnr, separator, available, is_active)
-            or build(win, bufnr, parts, separator, available, is_active, is_help)
+            or build(win, bufnr, parts, separator, available, is_active)
     end
 
     return table.concat {
