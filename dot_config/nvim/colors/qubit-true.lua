@@ -50,6 +50,7 @@ local colors = {
     comment = hp.blend(p.purple, 0.7, p.bg),
     cyan = p.cyan,
     fg = p.fg,
+    fg_2 = p.fg_2,
     fuchsia = hp.blend(p.red, 0.8, p.pink),
     grey = hp.blend(p.fg, 0.7, p.bg),
     lavender = hp.blend(p.purple, 0.5, p.blue),
@@ -203,7 +204,7 @@ local groups = vim.tbl_extend('error', statusline_groups, {
     Structure = { fg = colors.yellow },
     Substitute = { fg = colors.fuchsia, bg = colors.orange, bold = true },
     Title = { fg = colors.cyan },
-    Todo = { fg = colors.purple, bold = true, italic = true },
+    Todo = { fg = colors.purple, italic = true },
     Type = { fg = colors.cyan },
     TypeDef = { fg = colors.yellow },
     Underlined = { fg = colors.cyan, underline = true },
@@ -299,6 +300,7 @@ local groups = vim.tbl_extend('error', statusline_groups, {
 
     -- Package manager.
     LazyDimmed = { fg = colors.grey },
+    LazyComment = { link = 'Conceal' },
 
     -- LSP.
     DiagnosticDeprecated = { strikethrough = true, fg = colors.fg },
@@ -321,7 +323,7 @@ local groups = vim.tbl_extend('error', statusline_groups, {
     DiagnosticWarn = { fg = colors.yellow },
     LspCodeLens = { fg = colors.cyan, underline = true },
     LspFloatWinBorder = { fg = colors.comment },
-    LspInlayHint = { fg = colors.nontext, italic = true, bold = true },
+    LspInlayHint = { fg = colors.fg_2 },
     LspReferenceRead = { bg = colors.transparent_blue }, --, sp = colors.blue, underline = true },
     LspReferenceText = {},
     LspReferenceWrite = { bg = colors.transparent_red }, -- sp = colors.red, underline = true },
@@ -439,7 +441,6 @@ local groups = vim.tbl_extend('error', statusline_groups, {
     BufferLineFileIcon = { bg = colors.bg },
     BufferLineFill = { bg = colors.bg, underline = true, sp = colors.black },
     TabLineSel = { bg = colors.purple },
-
 
     -- When triggering flash, use a white font and make everything in the backdrop italic.
     FlashBackdrop = { italic = true },

@@ -24,7 +24,6 @@ return {
             appearance = {
                 kind_icons = require('icons').symbol_kinds,
                 nerd_font_variant = 'mono',
-
             },
             completion = {
                 documentation = { auto_show = true },

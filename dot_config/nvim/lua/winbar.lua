@@ -5,12 +5,13 @@ local robot_icon = require('icons').misc.robot
 
 local M = {}
 
----@alias WinbarOptions { separator?: string, buffer_symbols?: BufferSymbols, abbreviated_dirs?: AbbreviatedDirs }
+--- @alias WinbarOptions { separator?: string, buffer_symbols?: BufferSymbols, abbreviated_dirs?: AbbreviatedDirs, highlight?: ModeHighlightOptions }
 
----@class Options
----@field separator string Delimiter used to seperate path breadcrumbs.
----@field buffer_symbols BufferSymbols Symbols to be used for the buffer state.
----@field abbreviated_dirs AbbreviatedDirs Dirs to abbreviate in the breadcrumbs.
+--- @class Options
+--- @field separator string Delimiter used to seperate path breadcrumbs.
+--- @field buffer_symbols BufferSymbols Symbols to be used for the buffer state.
+--- @field abbreviated_dirs AbbreviatedDirs Dirs to abbreviate in the breadcrumbs.
+--- @field highlight ModeHighlightOptions Configuration for mode highlight.
 local Options = {
     separator = ' / ',
     buffer_symbols = {
@@ -22,41 +23,49 @@ local Options = {
         CONFIG = vim.fs.normalize(vim.env.XDG_CONFIG_HOME or vim.env.HOME .. '/.config'),
         HOME = vim.fs.normalize(vim.env.HOME),
     },
+    highlight = {
+        left = '▊',
+        right = '🮊',
+    }
 }
 
----@class BufferSymbols
----@field modified string Symbol to denote a buffer with unwritten changes.
----@field readonly string Symbol to denote a buffer that is readonly.
----@field newfile string Symbol to denote a buffer to a new file.
+--- @class ModeHighlightOptions
+--- @field left? string
+--- @field right? string
 
----@alias AbbreviatedDirs table<string, DirOptions|string>
+--- @class BufferSymbols
+--- @field modified string Symbol to denote a buffer with unwritten changes.
+--- @field readonly string Symbol to denote a buffer that is readonly.
+--- @field newfile string Symbol to denote a buffer to a new file.
 
----@class DirOptions
----@field path string The path to the dir.
----@field transparent boolean If true, the subdirectory will be used as the prefix instead when relevant.
+--- @alias AbbreviatedDirs table<string, DirOptions|string>
 
----@class Breadcrumb_Parts
----@field tokens string[] All unstyled path tokens for the buffer, exlcuding the prefix and target.
----@field prefix? string The unstyled prefix for the buffer, if any.
----@field target? string The unstyled target for the buffer, if any.
+--- @class DirOptions
+--- @field path string The path to the dir.
+--- @field transparent boolean If true, the subdirectory will be used as the prefix instead when relevant.
 
----Cache of path tokens per buffer.
----@type table<integer, Breadcrumb_Parts>
+--- @class Breadcrumb_Parts
+--- @field tokens string[] All unstyled path tokens for the buffer, exlcuding the prefix and target.
+--- @field prefix? string The unstyled prefix for the buffer, if any.
+--- @field target? string The unstyled target for the buffer, if any.
+
+--- Cache of path tokens per buffer.
+--- @type table<integer, Breadcrumb_Parts>
 local cache = {}
 
----@class Window_State
----@field bufnr integer The bufnr id the cache is for.
----@field path? string The styled breadcrumbs up to the target, exclusive of the target seperator.
----@field pathNC? string The NC styled breadcrumbs up to the target, exclusive of the target seperator.
----@field truncated_token? string The first truncated breadcrumb, if any.
----@field truncated integer The number of tokens truncated.
----@field display_width integer The display width of the cached path.
+--- @class Window_State
+--- @field bufnr integer The bufnr id the cache is for.
+--- @field path? string The styled breadcrumbs up to the target, exclusive of the target seperator.
+--- @field pathNC? string The NC styled breadcrumbs up to the target, exclusive of the target seperator.
+--- @field truncated_token? string The first truncated breadcrumb, if any.
+--- @field truncated integer The number of tokens truncated.
+--- @field display_width integer The display width of the cached path.
 
----Cache of window rendered breadcrumbs.
----@type table<integer, Window_State>
+--- Cache of window rendered breadcrumbs.
+--- @type table<integer, Window_State>
 local window_cache = {}
 
----@return boolean
+--- @return boolean
 local function is_new_file()
     local filename = vim.fn.expand('%')
     return filename ~= ''
@@ -65,9 +74,9 @@ local function is_new_file()
         and vim.fn.filereadable(filename) == 0
 end
 
----Adopted from lualine filename componenet
----Builds a target suffix for the buffer state, eg [+,New]
----@return string | nil
+--- Adopted from lualine filename componenet
+--- Builds a target suffix for the buffer state, eg [+,New]
+--- @return string | nil
 local function get_symbols()
     if not Options.buffer_symbols then
         return nil
@@ -87,11 +96,11 @@ local function get_symbols()
     return (#symbols > 0 and '[' .. table.concat(symbols, ',') .. ']' or nil)
 end
 
----Gets the breadcrumb parts for the current buffer.
----If it is cached, the cached value is immediately returned,
----else it builds them and adds them to the cache.
----@param bufnr integer The buffer to get parts for.
----@return Breadcrumb_Parts
+--- Gets the breadcrumb parts for the current buffer.
+--- If it is cached, the cached value is immediately returned,
+--- else it builds them and adds them to the cache.
+--- @param bufnr integer The buffer to get parts for.
+--- @return Breadcrumb_Parts
 local function get_parts(bufnr)
     if cache[bufnr] then
         return cache[bufnr]
@@ -144,13 +153,13 @@ local function get_parts(bufnr)
     return cache[bufnr]
 end
 
----Formats the given target according to the buffer state.
----@param bufnr integer
----@param target string | nil
----@param is_active boolean
----@param is_help boolean
----@param is_code_companion boolean
----@return string | nil, integer
+--- Formats the given target according to the buffer state.
+--- @param bufnr integer
+--- @param target string | nil
+--- @param is_active boolean
+--- @param is_help boolean
+--- @param is_code_companion boolean
+--- @return string | nil, integer
 local function get_target(bufnr, target, is_active, is_help, is_code_companion)
     if not target then
         return nil, 0
@@ -185,13 +194,13 @@ local function get_target(bufnr, target, is_active, is_help, is_code_companion)
     return table.concat(target_parts, ' '), display_width
 end
 
----Attempts to load the breadcrumbs for the given buffer for the target window
----cache. If no cache is found or it is no longer valid, nil is returned.
----@param win integer The ID of the window.
----@param bufnr integer The ID of the buffer.
----@param separator string The seperator we are using.
----@param available integer The available space to draw in.
----@return string | nil
+--- Attempts to load the breadcrumbs for the given buffer for the target window
+--- cache. If no cache is found or it is no longer valid, nil is returned.
+--- @param win integer The ID of the window.
+--- @param bufnr integer The ID of the buffer.
+--- @param separator string The seperator we are using.
+--- @param available integer The available space to draw in.
+--- @return string | nil
 local function load_from_window_catch(win, bufnr, separator, available, is_active)
     local cached = window_cache[win]
     if not cached or bufnr ~= cached.bufnr then
@@ -218,17 +227,17 @@ local function load_from_window_catch(win, bufnr, separator, available, is_activ
     end
 end
 
----Builds the breadcrumbs according to the target window and buffer with the
----provided target. Applies truncation to make sure that the breadcrumbs
----will fit in the target winbar. It will not be truncated more than prefix?,
----context, target.
----@param win integer Window id which we are building for.
----@param bufnr integer Buffer id which we are building for.
----@param parts Breadcrumb_Parts The breadcrumb parts for the buffer.
----@param separator string The separator we are using.
----@param available integer The available space to draw in.
----@param is_active boolean If the target window is the active window or not.
----@return string
+--- Builds the breadcrumbs according to the target window and buffer with the
+--- provided target. Applies truncation to make sure that the breadcrumbs
+--- will fit in the target winbar. It will not be truncated more than prefix?,
+--- context, target.
+--- @param win integer Window id which we are building for.
+--- @param bufnr integer Buffer id which we are building for.
+--- @param parts Breadcrumb_Parts The breadcrumb parts for the buffer.
+--- @param separator string The separator we are using.
+--- @param available integer The available space to draw in.
+--- @param is_active boolean If the target window is the active window or not.
+--- @return string
 local function build(win, bufnr, parts, separator, available, is_active)
     local separator_length = vim.fn.strdisplaywidth(separator)
     local used = 0
@@ -305,8 +314,11 @@ local function build(win, bufnr, parts, separator, available, is_active)
     return path
 end
 
----@return string
+--- @return string?
 local function mode_highlight(is_active, string)
+    if not string then
+        return ''
+    end
     if not is_active then
         return '%#WinBarModeHighlightNC#' .. string
     else
@@ -314,18 +326,18 @@ local function mode_highlight(is_active, string)
     end
 end
 
-local left_highlight = '▊'
-local right_highlight = '🮊'
-
 function M.render()
     local win = vim.api.nvim_get_current_win()
     local bufnr = vim.api.nvim_get_current_buf()
     local is_active = tostring(win) == vim.g.actual_curwin
     local is_help = vim.bo[bufnr].buftype == 'help'
     local is_code_companion = vim.bo.filetype == 'codecompanion'
-    -- TODO: Make this dynamic
-    local highlight_width = vim.fn.strdisplaywidth(left_highlight) + vim.fn.strdisplaywidth(right_highlight)
+
+    local left_highlight = Options.highlight.left
+    local right_highlight = Options.highlight.right
+    local highlight_width = vim.fn.strdisplaywidth(left_highlight or '') + vim.fn.strdisplaywidth(right_highlight or '')
     local left, right = mode_highlight(is_active, left_highlight), mode_highlight(is_active, right_highlight)
+
     local separator = Options.separator or ''
     local parts = get_parts(bufnr)
     local target, target_display_width = get_target(bufnr, parts.target, is_active, is_help, is_code_companion)
@@ -355,13 +367,11 @@ function M.render()
     }
 end
 
----@param user_options? WinbarOptions
+--- @param user_options? WinbarOptions
 function M.setup(user_options)
     if user_options then
         Options = vim.tbl_deep_extend('keep', user_options, Options)
     end
-
-    -- vim.go.winbar = "%{%(nvim_get_current_win()==#g:actual_curwin) ? luaeval('M.build(true)') : luaeval('M.build(false)')%}"
 
     local group = vim.api.nvim_create_augroup('quincyjo/winbar', { clear = true })
 

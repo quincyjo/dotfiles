@@ -18,8 +18,8 @@ return {
                 'RainbowDelimiterGreen',
                 'RainbowDelimiterViolet',
                 'RainbowDelimiterBlue',
-            }
-        }
+            },
+        },
     },
     config = function(_, opts)
         local hooks = require "ibl.hooks"

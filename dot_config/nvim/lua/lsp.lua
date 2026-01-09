@@ -51,7 +51,7 @@ local function on_attach(client, bufnr)
         vim.diagnostic.setloclist,
         'Buffer diagnostics')
 
-    if client:supports_method 'textDocument/codeAction' then
+    if client:supports_method('textDocument/codeAction') then
         require('lightbulb').attach_lightbulb(bufnr, client)
     end
 
@@ -68,57 +68,59 @@ local function on_attach(client, bufnr)
 
     -- Don't check for the capability here to allow dynamic registration of the request.
     vim.lsp.document_color.enable(true, bufnr)
-    if client:supports_method 'textDocument/documentColor' then
+    if client:supports_method('textDocument/documentColor') then
         keymap('grc', function()
             vim.lsp.document_color.color_presentation()
         end, 'vim.lsp.document_color.color_presentation()', { 'n', 'x' })
     end
 
-    if client:supports_method 'textDocument/references' then
+    if client:supports_method('textDocument/references') then
         keymap('grr', '<cmd>FzfLua lsp_references<cr>', 'vim.lsp.buf.references()')
     end
 
-    if client:supports_method 'textDocument/typeDefinition' then
+    if client:supports_method('textDocument/typeDefinition') then
         keymap('gy', '<cmd>FzfLua lsp_typedefs<cr>', 'Go to type definition')
     end
 
-    if client:supports_method 'textDocument/documentSymbol' then
-        keymap('gds', '<cmd>FzfLua lsp_document_symbols<cr>', 'Document symbols')
+    if client:supports_method('textDocument/documentSymbol') then
+        keymap('gs', '<cmd>FzfLua lsp_document_symbols<cr>', 'Document symbols')
     end
 
-    if client:supports_method 'workspace/symbol' then
+    if client:supports_method('workspace/symbol') then
         keymap('gws', '<cmd>FzfLua lsp_workplace_symbols<cr>', 'Workplace symbols')
     end
 
-    if client:supports_method 'textDocument/hover' then
+    if client:supports_method('textDocument/hover') then
         keymap('K', vim.lsp.buf.hover, 'Hover hint')
     end
 
-    if client:supports_method 'textDocument/rename' then
+    if client:supports_method('textDocument/rename') then
         keymap('<leader>rn', vim.lsp.buf.rename, 'Rename')
     end
 
-    if client:supports_method 'textDocument/definition' then
+    if client:supports_method('textDocument/definition') then
         keymap('gd', function()
-            require('fzf-lua').lsp_definitions { jump1 = true }
+            require('cinnamon').scroll(function()
+                require('fzf-lua').lsp_definitions { jump1 = true }
+            end)
         end, 'Go to definition')
         keymap('gD', function()
             require('fzf-lua').lsp_definitions { jump1 = false }
         end, 'Peek definition')
     end
 
-    if client:supports_method 'textDocument/signatureHelp' then
-        keymap('<C-q>', function()
+    if client:supports_method('textDocument/signatureHelp') then
+        keymap('<C-p>', function()
             -- Close the completion menu first (if open).
             if require('blink.cmp.completion.windows.menu').win:is_open() then
                 require('blink.cmp').hide()
             end
 
             vim.lsp.buf.signature_help()
-        end, 'Signature help', 'n')
+        end, 'Signature help', 'i')
     end
 
-    if client:supports_method 'textDocument/documentHighlight' then
+    if client:supports_method('textDocument/documentHighlight') then
         local under_cursor_highlights_group =
             vim.api.nvim_create_augroup('quincyjo/cursor_highlights', { clear = false })
         vim.api.nvim_create_autocmd({ 'CursorHold', 'InsertLeave' }, {
@@ -135,12 +137,12 @@ local function on_attach(client, bufnr)
         })
     end
 
-    if client:supports_method 'textDocument/formatting' then
+    if client:supports_method('textDocument/formatting') then
         vim.keymap.set("n", "<leader>f", vim.lsp.buf.format)
     end
 
     -- TODO: Set this up as desired
-    if client:supports_method 'textDocument/inlayHint' then
+    if client:supports_method('textDocument/inlayHint') then
         local inlay_hints_group = vim.api.nvim_create_augroup('quincyjo/toggle_inlay_hints', { clear = false })
 
         if vim.g.inlay_hints then
