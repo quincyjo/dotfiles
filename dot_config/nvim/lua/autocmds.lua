@@ -31,6 +31,12 @@ vim.api.nvim_create_autocmd({ 'BufLeave', 'FocusLost', 'InsertEnter', 'CmdlineEn
             vim.wo.relativenumber = false
         end
 
+        -- We need to redraw treesitter-context to update its line numbers.
+        if package.loaded['treesitter-context'] then
+            require('treesitter-context').toggle()
+            require('treesitter-context').toggle()
+        end
+
         -- Redraw here to avoid having to first write something for the line numbers to update.
         if args.event == 'CmdlineEnter' then
             if not vim.tbl_contains({ '@', '-' }, vim.v.event.cmdtype) then
