@@ -3,6 +3,8 @@ local misc_icons = require('icons').misc
 
 vim.g.inlay_hints = false
 
+local M = {}
+
 --- Sets up LSP keymaps and autocommands for the given buffer.
 ---@param client vim.lsp.Client
 ---@param bufnr integer
@@ -200,173 +202,178 @@ local function on_attach(client, bufnr)
     end
 end
 
--- Define the diagnostic signs.
-for severity, icon in pairs(diagnostic_icons) do
-    local hl = 'DiagnosticSign' .. severity:sub(1, 1) .. severity:sub(2):lower()
-    vim.fn.sign_define(hl, { text = icon, texthl = hl })
-end
-
---[[ Currently not used diagnostic jump display. Nice because it is sticky while editing.
-local virt_lines_ns = vim.api.nvim_create_namespace 'on_diagnostic_jump'
---- @param diagnostic? vim.Diagnostic
---- @param bufnr integer
-local function on_jump(diagnostic, bufnr)
-    if not diagnostic then return end
-    vim.diagnostic.show(
-        virt_lines_ns,
-        bufnr,
-        { diagnostic },
-        { virtual_lines = { current_line = true }, virtual_text = false }
-    )
-end
-]]
-
--- Diagnostic configuration.
-vim.diagnostic.config {
-    -- jump = { on_jump = on_jump },
-    virtual_text = {
-        source = false, --'if_many',
-        spacing = 2,
-        prefix = function(diagnostic, i, total)
-            -- This will take the highlight group of the fist diagnostic.
-            -- Highlighting each count appropriately would require fetching
-            -- diagnostics each time to return from one of matching severity,
-            -- and only do so on the first instance of each severity.
-            -- Opting not to for performance.
-            if total > 1 then
-                if i == 1 then
-                    local prefix = {}
-                    local all_diagnostics = vim.diagnostic.get(0, { lnum = diagnostic.lnum })
-                    local severity_counts = {}
-                    for _, d in pairs(all_diagnostics) do
-                        severity_counts[d.severity] = (severity_counts[d.severity] or 0) + 1
-                    end
-                    for severity, count in pairs(severity_counts) do
-                        table.insert(prefix, count .. diagnostic_icons[vim.diagnostic.severity[severity]])
-                    end
-                    return table.concat(prefix)
-                else
-                    return ''
-                end
-            end
-            return diagnostic_icons[vim.diagnostic.severity[diagnostic.severity]]
-        end,
-        format = function(diagnostic)
-            -- Show code and source if available.
-            if diagnostic.code then
-                if #diagnostic.message <= 30 then
-                    return diagnostic.message
-                end
-                return string.format('[%s]', diagnostic.code)
-                -- Else show message truncated.
-            else
-                -- Take the first line, reduce dot chains, and truncate length to a
-                -- reasonable length with ellipsis if needed.
-                local line_index = diagnostic.message:find('\n')
-                local first_line = line_index
-                    and (diagnostic.message:sub(1, line_index - 1) .. misc_icons.ellipsis)
-                    or diagnostic.message
-                local message = require('util').trim_dot_chains(first_line, 1):gsub('%s+', ' ')
-                local truncate_to = math.floor(vim.o.columns * 0.4)
-                if #message < truncate_to then
-                    return message
-                else
-                    return string.sub(message, 0, truncate_to - 1) .. misc_icons.ellipsis
-                end
-            end
-        end,
-    },
-    float = {
-        border = 'rounded',
-        source = 'if_many',
-        -- Show severity icons as prefixes.
-        prefix = function(diag)
-            local level = vim.diagnostic.severity[diag.severity]
-            local prefix = string.format(' %s ', diagnostic_icons[level])
-            return prefix, 'Diagnostic' .. level:gsub('^%l', string.upper)
-        end,
-        format = function(diagnostic)
-            return diagnostic.message
-        end,
-    },
-    -- Disable signs in the gutter.
-    signs = false,
-}
-
--- Override the virtual text diagnostic handler so that the most severe diagnostic is shown first.
-local show_handler = vim.diagnostic.handlers.virtual_text.show
-assert(show_handler)
-local hide_handler = vim.diagnostic.handlers.virtual_text.hide
-vim.diagnostic.handlers.virtual_text = {
-    show = function(ns, bufnr, diagnostics, opts)
-        table.sort(diagnostics, function(diag1, diag2)
-            return diag1.severity > diag2.severity
-        end)
-        return show_handler(ns, bufnr, diagnostics, opts)
-    end,
-    hide = hide_handler,
-}
-
-local hover = vim.lsp.buf.hover
----@diagnostic disable-next-line: duplicate-set-field
-vim.lsp.buf.hover = function()
-    return hover {
-        max_height = math.floor(vim.o.lines * 0.5),
-        max_width = math.floor(vim.o.columns * 0.4),
-    }
-end
-
-local signature_help = vim.lsp.buf.signature_help
----@diagnostic disable-next-line: duplicate-set-field
-vim.lsp.buf.signature_help = function()
-    return signature_help {
-        max_height = math.floor(vim.o.lines * 0.5),
-        max_width = math.floor(vim.o.columns * 0.4),
-    }
-end
-
--- Update mappings when registering dynamic capabilities.
-local register_capability = vim.lsp.handlers['client/registerCapability']
-vim.lsp.handlers['client/registerCapability'] = function(err, res, ctx)
-    local client = vim.lsp.get_client_by_id(ctx.client_id)
-    if not client then
-        return
+function M.setup()
+    -- Define the diagnostic signs.
+    for severity, icon in pairs(diagnostic_icons) do
+        local hl = 'DiagnosticSign' .. severity:sub(1, 1) .. severity:sub(2):lower()
+        vim.fn.sign_define(hl, { text = icon, texthl = hl })
     end
 
-    on_attach(client, vim.api.nvim_get_current_buf())
+    --[[ Currently not used diagnostic jump display. Nice because it is sticky while editing.
+    local virt_lines_ns = vim.api.nvim_create_namespace 'on_diagnostic_jump'
+    --- @param diagnostic? vim.Diagnostic
+    --- @param bufnr integer
+    local function on_jump(diagnostic, bufnr)
+        if not diagnostic then return end
+        vim.diagnostic.show(
+            virt_lines_ns,
+            bufnr,
+            { diagnostic },
+            { virtual_lines = { current_line = true }, virtual_text = false }
+        )
+    end
+    ]]
 
-    return register_capability(err, res, ctx)
-end
+    -- Diagnostic configuration.
+    vim.diagnostic.config {
+        -- jump = { on_jump = on_jump },
+        virtual_text = {
+            source = false, --'if_many',
+            spacing = 2,
+            prefix = function(diagnostic, i, total)
+                -- This will take the highlight group of the fist diagnostic.
+                -- Highlighting each count appropriately would require fetching
+                -- diagnostics each time to return from one of matching severity,
+                -- and only do so on the first instance of each severity.
+                -- Opting not to for performance.
+                if total > 1 then
+                    if i == 1 then
+                        local prefix = {}
+                        local all_diagnostics = vim.diagnostic.get(0, { lnum = diagnostic.lnum })
+                        local severity_counts = {}
+                        for _, d in pairs(all_diagnostics) do
+                            severity_counts[d.severity] = (severity_counts[d.severity] or 0) + 1
+                        end
+                        for severity, count in pairs(severity_counts) do
+                            table.insert(prefix, count .. diagnostic_icons[vim.diagnostic.severity[severity]])
+                        end
+                        return table.concat(prefix)
+                    else
+                        return ''
+                    end
+                end
+                return diagnostic_icons[vim.diagnostic.severity[diagnostic.severity]]
+            end,
+            format = function(diagnostic)
+                -- Show code and source if available.
+                if diagnostic.code then
+                    if #diagnostic.message <= 30 then
+                        return diagnostic.message
+                    end
+                    return string.format('[%s]', diagnostic.code)
+                    -- Else show message truncated.
+                else
+                    -- Take the first line, reduce dot chains, and truncate length to a
+                    -- reasonable length with ellipsis if needed.
+                    local line_index = diagnostic.message:find('\n')
+                    local first_line = line_index
+                        and (diagnostic.message:sub(1, line_index - 1) .. misc_icons.ellipsis)
+                        or diagnostic.message
+                    local message = require('util').trim_dot_chains(first_line, 1):gsub('%s+', ' ')
+                    local truncate_to = math.floor(vim.o.columns * 0.4)
+                    if #message < truncate_to then
+                        return message
+                    else
+                        return string.sub(message, 0, truncate_to - 1) .. misc_icons.ellipsis
+                    end
+                end
+            end,
+        },
+        float = {
+            border = 'rounded',
+            source = 'if_many',
+            -- Show severity icons as prefixes.
+            prefix = function(diag)
+                local level = vim.diagnostic.severity[diag.severity]
+                local prefix = string.format(' %s ', diagnostic_icons[level])
+                return prefix, 'Diagnostic' .. level:gsub('^%l', string.upper)
+            end,
+            format = function(diagnostic)
+                return diagnostic.message
+            end,
+        },
+        -- Disable signs in the gutter.
+        signs = false,
+    }
 
-vim.api.nvim_create_autocmd('LspAttach', {
-    desc = 'Configure LSP keymaps',
-    callback = function(args)
-        local client = vim.lsp.get_client_by_id(args.data.client_id)
+    -- Override the virtual text diagnostic handler so that the most severe diagnostic is shown first.
+    local show_handler = vim.diagnostic.handlers.virtual_text.show
+    assert(show_handler)
+    local hide_handler = vim.diagnostic.handlers.virtual_text.hide
+    vim.diagnostic.handlers.virtual_text = {
+        show = function(ns, bufnr, diagnostics, opts)
+            table.sort(diagnostics, function(diag1, diag2)
+                return diag1.severity > diag2.severity
+            end)
+            return show_handler(ns, bufnr, diagnostics, opts)
+        end,
+        hide = hide_handler,
+    }
 
-        -- I don't think this can happen but it's a wild world out there.
+    local hover = vim.lsp.buf.hover
+    ---@diagnostic disable-next-line: duplicate-set-field
+    vim.lsp.buf.hover = function()
+        return hover {
+            max_height = math.floor(vim.o.lines * 0.5),
+            max_width = math.floor(vim.o.columns * 0.4),
+        }
+    end
+
+    local signature_help = vim.lsp.buf.signature_help
+    ---@diagnostic disable-next-line: duplicate-set-field
+    vim.lsp.buf.signature_help = function()
+        return signature_help {
+            max_height = math.floor(vim.o.lines * 0.5),
+            max_width = math.floor(vim.o.columns * 0.4),
+        }
+    end
+
+    -- Update mappings when registering dynamic capabilities.
+    local register_capability = vim.lsp.handlers['client/registerCapability']
+    vim.lsp.handlers['client/registerCapability'] = function(err, res, ctx)
+        local client = vim.lsp.get_client_by_id(ctx.client_id)
         if not client then
             return
         end
 
-        on_attach(client, args.buf)
-    end,
-})
+        on_attach(client, vim.api.nvim_get_current_buf())
 
---[[ Set up LSP servers.
--- This is the alternative loading custom lsp configuration from config.
--- Instead, they are loaded via nvim-lspconfig and nvim-metals.
-vim.api.nvim_create_autocmd({ 'BufReadPre', 'BufNewFile' }, {
-    once = true,
-    callback = function()
-        -- Extend neovim's client capabilities with the completion ones.
-        vim.lsp.config('*', { capabilities = require('blink.cmp').get_lsp_capabilities(nil, true) })
+        return register_capability(err, res, ctx)
+    end
 
-        local servers = vim.iter(vim.api.nvim_get_runtime_file('lsp/*.lua', true))
-            :map(function(file)
-                return vim.fn.fnamemodify(file, ':t:r')
-            end)
-            :totable()
-        vim.lsp.enable(servers)
-    end,
-})
-]]
+    vim.api.nvim_create_autocmd('LspAttach', {
+        desc = 'Configure LSP keymaps',
+        callback = function(args)
+            local client = vim.lsp.get_client_by_id(args.data.client_id)
+
+            -- I don't think this can happen but it's a wild world out there.
+            if not client then
+                return
+            end
+
+            on_attach(client, args.buf)
+        end,
+    })
+
+    --[[ Set up LSP servers.
+    -- This is the alternative loading custom lsp configuration from config.
+    -- Instead, they are loaded via nvim-lspconfig and nvim-metals.
+    vim.api.nvim_create_autocmd({ 'BufReadPre', 'BufNewFile' }, {
+        once = true,
+        callback = function()
+            -- Extend neovim's client capabilities with the completion ones.
+            vim.lsp.config('*', { capabilities = require('blink.cmp').get_lsp_capabilities(nil, true) })
+
+            local servers = vim.iter(vim.api.nvim_get_runtime_file('lsp/*.lua', true))
+                :map(function(file)
+                    return vim.fn.fnamemodify(file, ':t:r')
+                end)
+                :totable()
+            vim.lsp.enable(servers)
+        end,
+    })
+    ]]
+end
+
+return M
+

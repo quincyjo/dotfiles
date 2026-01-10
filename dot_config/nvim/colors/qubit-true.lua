@@ -443,8 +443,9 @@ local groups = vim.tbl_extend('error', statusline_groups, {
     TabLineSel = { bg = colors.purple },
 
     -- When triggering flash, use a white font and make everything in the backdrop italic.
-    FlashBackdrop = { italic = true },
+    FlashBackdrop = { italic = false, fg = colors.fg_2 },
     FlashPrompt = { link = 'Normal' },
+    FlashLabel = { link = 'IncSearch' },
 
     -- Make these titles more visible.
     MiniClueTitle = { bold = true, fg = colors.cyan },

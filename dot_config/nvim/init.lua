@@ -1,3 +1,4 @@
+-- My custom stuff.
 require('settings')
 require('keymaps')
 require('commands')
@@ -12,8 +13,9 @@ require('winbar').setup {
         },
     },
 }
-require('marks')
-require('lsp')
+require('marks').setup()
+require('lsp').setup()
 
+-- Load lazy.nvim.
 require('config.lazy')
 

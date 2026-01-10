@@ -244,16 +244,23 @@ function M.search_component()
     }
 end
 
+function M.venv_component()
+    if not package.loaded['venv-selector'] then
+        return nil
+    end
+    local render = require('venv-selector.statusline.lualine').render()
+    return render and render ~= '' and render or nil
+end
+
 --- Renders the statusline.
 ---@return string
 function M.render()
     ---@param components string[]
     ---@return string
     local function concat_components(components)
-        return table.concat(
-            vim.iter(components):filter(function(x) return #x > 0 end):totable(),
-            ' %#StatusLineSeparator#󰿟 '
-        )
+        return vim.iter(components)
+            :filter(function(x) return #x > 0 end)
+            :join(' %#StatusLineSeparator#󰿟 ')
     end
 
     return table.concat {
@@ -268,6 +275,7 @@ function M.render()
         concat_components {
             M.search_component(),
             M.diagnostics_component(),
+            M.venv_component(),
             M.filetype_component(),
             M.encoding_component(),
             M.position_component(),
