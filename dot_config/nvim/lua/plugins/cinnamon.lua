@@ -1,7 +1,6 @@
 return {
     'declancm/cinnamon.nvim',
     version = '*',
-    event = 'VeryLazy',
     ---@module 'cinnamon'
     ---@type CinnamonOptions
     opts = {
@@ -21,7 +20,6 @@ return {
         },
     },
     keys = function()
-        local cinnamon = require('cinnamon')
         local keymaps = {}
         local centered_commands = {
             -- For some reason this makes it jump to nonexistent results.
@@ -47,17 +45,18 @@ return {
         for _, cmd in ipairs(centered_commands) do
             table.insert(keymaps, {
                 cmd,
-                function() cinnamon.scroll(cmd .. 'zz') end,
+                function() require('cinnamon').scroll(cmd .. 'zz') end,
                 mode = { 'n', 'v' }
             })
         end
         for _, cmd in ipairs(commands) do
             table.insert(keymaps, {
                 cmd,
-                function() cinnamon.scroll(cmd) end,
+                function() require('cinnamon').scroll(cmd) end,
                 mode = { 'n', 'v' }
             })
         end
         return keymaps
     end,
 }
+

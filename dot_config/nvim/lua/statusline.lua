@@ -1,4 +1,4 @@
-local icons = require 'icons'
+local icons = require('icons')
 local mode_highlight_group = require('util').mode_highlight_group
 local mode_string = require('util').mode_string
 

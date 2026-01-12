@@ -13,6 +13,7 @@ alias back="cd $OLDPWD"
 
 # Only alias nvim over vi if installed.
 # if command -v nvim &>/dev/null; then
+  alias v="nvim"
   alias vi="nvim"
   alias vim="nvim"
 # fi

@@ -1,13 +1,5 @@
 local M = {}
 
----@class RGB
----@field r number A number between 0 and 255
----@field g number A number between 0 and 255
----@field b number A number between 0 and 255
-
----@alias HexColor string Hex color code, eg #abc123
----@alias Alpha number Number between 0 and 1
-
 ---@param hex HexColor
 ---@return RGB
 local function hex_to_rgb(hex)
@@ -68,6 +60,45 @@ function M.blend(hex, alpha, base)
 
   local rgb = hex_to_rgb(hex)
   return M.rgba(rgb, alpha, base or '#000000')
+end
+
+---@param palette Palette
+---@return Colors
+function M.colors_from_palette(palette)
+    return {
+        bg = palette.bg,
+        bg_2 = palette.bg_2,
+        bg_3 = palette.bg_3,
+        fg = palette.fg,
+        fg_2 = palette.fg_2,
+        black = palette.black,
+        pink = palette.pink,
+        red = palette.red,
+        green = palette.green,
+        blue = palette.blue,
+        yellow = palette.yellow,
+        purple = palette.purple,
+        orange = palette.orange,
+        cyan = palette.cyan,
+        white = palette.white,
+        bright_pink = M.lighten(palette.pink, 40),
+        bright_red = M.lighten(palette.red, 40),
+        bright_green = M.lighten(palette.green, 40),
+        bright_yellow = M.lighten(palette.yellow, 40),
+        bright_blue = M.lighten(palette.blue, 40),
+        bright_cyan = M.lighten(palette.cyan, 40),
+        bright_purple = M.lighten(palette.purple, 40),
+        bright_white = M.lighten(palette.white, 40),
+        comment = M.blend(palette.purple, 0.7, palette.bg),
+        fuchsia = M.blend(palette.red, 0.8, palette.pink),
+        grey = M.blend(palette.fg, 0.7, palette.bg),
+        lavender = M.blend(palette.purple, 0.5, palette.blue),
+        lilac = M.blend(palette.purple, 0.5, palette.bg),
+        transparent_red = M.blend(palette.red, 0.15, palette.bg),
+        transparent_green = M.blend(palette.green, 0.15, palette.bg),
+        transparent_yellow = M.blend(palette.yellow, 0.15, palette.bg),
+        transparent_blue = M.blend(palette.blue, 0.15, palette.bg),
+    }
 end
 
 return M

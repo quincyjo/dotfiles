@@ -6,68 +6,12 @@ end
 vim.o.termguicolors = true
 vim.g.colors_name = 'qubit-true'
 
-local hp = require('color_blending')
-
-local p = {
-    foo = '#A89984',
-    black = '#0a0909',
-    white = '#e4e2e1',
-    bg = '#1c1b1a',
-    bg_2 = '#252121',
-    bg_3 = '#464442',
-    fg = '#d7d4d2',
-    fg_2 = '#656260',
-    pink = '#d3729c',   -- '#f3b1cb',
-    red = '#d3426c',    -- '#f3426c',
-    green = '#8aac54',  -- '#9abc54',
-    yellow = '#c3a22c', -- '#d3a22c', -- '#e3b23c',
-    blue = '#51a5c5',
-    cyan = '#62a7a3',
-    purple = '#b69bd3',
-    orange = '#e3826c',
-}
-
-local colors = {
-    bg = p.bg,
-    bg_3 = p.bg_3,
-    black = p.black,
-    pink = p.pink,
-    red = p.red,
-    green = p.green,
-    blue = p.blue,
-    yellow = p.yellow,
-    -- blue = p.blue,
-    purple = p.purple,
-    orange = p.orange,
-    bright_pink = hp.lighten(p.pink, 40),
-    bright_red = hp.lighten(p.red, 40),
-    bright_green = hp.lighten(p.green, 40),
-    bright_yellow = hp.lighten(p.yellow, 40),
-    -- bright_blue = hp.lighten(p.blue, 40),
-    bright_cyan = hp.lighten(p.cyan, 40),
-    bright_purple = hp.lighten(p.purple, 40),
-    bright_white = hp.lighten(p.white, 40),
-    comment = hp.blend(p.purple, 0.7, p.bg),
-    cyan = p.cyan,
-    fg = p.fg,
-    fg_2 = p.fg_2,
-    fuchsia = hp.blend(p.red, 0.8, p.pink),
-    grey = hp.blend(p.fg, 0.7, p.bg),
-    lavender = hp.blend(p.purple, 0.5, p.blue),
-    lilac = hp.blend(p.purple, 0.5, p.bg),
-    nontext = p.bg_3,
-    selection = p.fg_2,
-    transparent_black = p.bg_2,
-    transparent_red = hp.blend(p.red, 0.15, p.bg),
-    transparent_green = hp.blend(p.green, 0.15, p.bg),
-    transparent_yellow = hp.blend(p.yellow, 0.15, p.bg),
-    transparent_blue = hp.blend(p.blue, 0.15, p.bg),
-    visual = p.bg_3,
-    white = p.white,
-}
+local hp = require('colors.helpers')
+local palette = require('colors.palettes.qubit')
+local colors = hp.colors_from_palette(palette)
 
 -- Terminal colors.
-vim.g.terminal_color_0 = colors.transparent_black
+vim.g.terminal_color_0 = colors.bg_2
 vim.g.terminal_color_1 = colors.red
 vim.g.terminal_color_2 = colors.green
 vim.g.terminal_color_3 = colors.yellow
@@ -75,7 +19,7 @@ vim.g.terminal_color_4 = colors.purple
 vim.g.terminal_color_5 = colors.pink
 vim.g.terminal_color_6 = colors.cyan
 vim.g.terminal_color_7 = colors.white
-vim.g.terminal_color_8 = colors.selection
+vim.g.terminal_color_8 = colors.fg_2
 vim.g.terminal_color_9 = colors.bright_red
 vim.g.terminal_color_10 = colors.bright_green
 vim.g.terminal_color_11 = colors.bright_yellow
@@ -98,13 +42,13 @@ for mode, color in pairs {
     Other = colors.orange,
 } do
     if type(color) ~= 'table' then
-        statusline_groups['StatusLineMode' .. mode] = { fg = colors.transparent_black, bg = color }
-        statusline_groups['StatusLineModeSeparator' .. mode] = { fg = color, bg = colors.transparent_black }
+        statusline_groups['StatusLineMode' .. mode] = { fg = colors.bg_2, bg = color }
+        statusline_groups['StatusLineModeSeparator' .. mode] = { fg = color, bg = colors.bg_2 }
     else
         statusline_groups['StatusLineMode' .. mode] =
-            vim.tbl_extend('keep', color.extra or {}, { fg = colors.transparent_black, bg = color.color })
+            vim.tbl_extend('keep', color.extra or {}, { fg = colors.bg_2, bg = color.color })
         statusline_groups['StatusLineModeSeparator' .. mode] =
-            vim.tbl_extend('keep', color.extra or {}, { fg = color.color, bg = colors.transparent_black })
+            vim.tbl_extend('keep', color.extra or {}, { fg = color.color, bg = colors.bg_2 })
     end
 end
 statusline_groups = vim.tbl_extend('error', statusline_groups, {
@@ -134,7 +78,7 @@ end
 vim.tbl_extend('error', statusline_groups,
     vim.iter(get_highlights_by_pattern('^BufferLine.*Selected'))
     :map(function(group, opts)
-        opts.bg = colors.transparent_black
+        opts.bg = colors.bg_2
         return group, opts
     end)
     :totable()
@@ -146,15 +90,18 @@ local groups = vim.tbl_extend('error', statusline_groups, {
     -- Builtins.
     Boolean = { fg = colors.cyan },
     Character = { fg = colors.green },
-    ColorColumn = { bg = colors.selection },
+    ColorColumn = { bg = colors.fg_2 },
     Comment = { fg = colors.comment, italic = true },
     Conceal = { fg = colors.comment },
     Conditional = { fg = colors.pink },
     Constant = { fg = colors.yellow },
     CurSearch = { fg = colors.black, bg = colors.fuchsia },
     Cursor = { fg = colors.black, bg = colors.white },
-    CursorColumn = { bg = colors.transparent_black },
-    CursorLine = { bg = colors.transparent_black },
+    CursorColumn = { bg = colors.bg_2 },
+    CursorLine = { bg = colors.bg_2 },
+    FoldColumn = { bg = colors.bg_2 },
+    SignColumn = { bg = colors.bg_2 },
+    LineNr = { fg = colors.lilac, bg = colors.bg_2 },
     CursorLineNr = { bg = colors.bg_3, fg = colors.purple, bold = true },
     CursorLineSign = { bg = colors.bg_3, bold = true },
     CursorLineFold = { bg = colors.bg_3, bold = true },
@@ -163,43 +110,40 @@ local groups = vim.tbl_extend('error', statusline_groups, {
     EndOfBuffer = { fg = colors.bg },
     Error = { fg = colors.bright_red },
     ErrorMsg = { fg = colors.bright_red },
-    FoldColumn = { bg = colors.transparent_black },
-    Folded = { bg = colors.transparent_black },
+    Folded = { bg = colors.bg_2 },
     Function = { fg = colors.yellow },
     Identifier = { fg = colors.cyan },
     IncSearch = { link = 'CurSearch' },
     Include = { fg = colors.purple },
     Keyword = { fg = colors.cyan },
     Label = { fg = colors.cyan },
-    LineNr = { fg = colors.lilac, bg = colors.transparent_black },
     Macro = { fg = colors.purple },
     MatchParen = { sp = colors.fg, underline = true },
-    NonText = { fg = colors.nontext },
+    NonText = { fg = colors.bg_3 },
     Normal = { fg = colors.fg, bg = colors.bg },
-    NormalFloat = { fg = colors.fg, bg = colors.transparent_black },
-    FloatBorder = { fg = colors.lilac, bg = colors.transparent_black },
+    NormalFloat = { fg = colors.fg, bg = colors.bg_2 },
+    FloatBorder = { fg = colors.lilac, bg = colors.bg_2 },
     Number = { fg = colors.purple },
     Pmenu = { fg = colors.white, bg = colors.bg },
     PmenuSbar = { bg = colors.transparent_blue },
-    PmenuSel = { fg = colors.cyan, bg = colors.selection },
-    PmenuThumb = { bg = colors.selection },
+    PmenuSel = { fg = colors.cyan, bg = colors.fg_2 },
+    PmenuThumb = { bg = colors.fg_2 },
     PreCondit = { fg = colors.cyan },
     PreProc = { fg = colors.yellow },
     Question = { fg = colors.purple },
     Repeat = { fg = colors.pink },
     Search = { fg = colors.bg, bg = colors.orange },
     String = { fg = colors.yellow },
-    SignColumn = { bg = colors.transparent_black },
     Special = { fg = colors.green, italic = true, bold = true },
     SpecialComment = { fg = colors.comment, italic = true },
-    SpecialKey = { fg = colors.nontext },
+    SpecialKey = { fg = colors.bg_3 },
     SpellBad = { sp = colors.bright_red, underline = true },
     SpellCap = { sp = colors.yellow, underline = true },
     SpellLocal = { sp = colors.yellow, underline = true },
     SpellRare = { sp = colors.yellow, underline = true },
     Statement = { fg = colors.purple },
-    StatusLine = { fg = colors.white, bg = colors.transparent_black },
-    StatusLineNC = { fg = colors.white, bg = colors.transparent_black },
+    StatusLine = { fg = colors.white, bg = colors.bg_2 },
+    StatusLineNC = { fg = colors.white, bg = colors.bg_2 },
     StorageClass = { fg = colors.pink },
     Structure = { fg = colors.yellow },
     Substitute = { fg = colors.fuchsia, bg = colors.orange, bold = true },
@@ -209,10 +153,10 @@ local groups = vim.tbl_extend('error', statusline_groups, {
     TypeDef = { fg = colors.yellow },
     Underlined = { fg = colors.cyan, underline = true },
     VertSplit = { fg = colors.white },
-    Visual = { bg = colors.visual },
-    VisualNOS = { fg = colors.visual },
+    Visual = { bg = colors.bg_3 },
+    VisualNOS = { fg = colors.bg_3 },
     WarningMsg = { fg = colors.yellow },
-    WildMenu = { fg = colors.transparent_black, bg = colors.white },
+    WildMenu = { fg = colors.bg_2, bg = colors.white },
     Delimiter = { fg = colors.bg_3 },
 
     -- Treesitter.
@@ -373,9 +317,9 @@ local groups = vim.tbl_extend('error', statusline_groups, {
     BlinkCmpKindVariable = { link = '@variable' },
     BlinkCmpLabelDeprecated = { link = 'DiagnosticDeprecated' },
     BlinkCmpLabelDescription = { fg = colors.grey, italic = true },
-    BlinkCmpLabelDetail = { fg = colors.grey, bg = colors.transparent_black },
-    BlinkCmpMenu = { bg = colors.transparent_black },
-    BlinkCmpMenuBorder = { bg = colors.transparent_black },
+    BlinkCmpLabelDetail = { fg = colors.grey, bg = colors.bg_2 },
+    BlinkCmpMenu = { bg = colors.bg_2 },
+    BlinkCmpMenuBorder = { bg = colors.bg_2 },
     BlinkCmpMenuSelection = { bg = colors.bg_3 },
 
     -- Dap UI.
@@ -399,7 +343,7 @@ local groups = vim.tbl_extend('error', statusline_groups, {
     MsgSeparator = { fg = colors.lilac },
 
     -- Winbar styling.
-    WinBar = { bg = colors.transparent_black, fg = colors.fg, sp = colors.selection, underline = true },
+    WinBar = { bg = colors.bg_2, fg = colors.fg, sp = colors.fg_2, underline = true },
     WinBarDir = { fg = colors.purple },
     WinBarDoc = { fg = colors.blue, italic = true, bold = true },
     WinBarCodeCompanion = { fg = colors.pink },
@@ -408,8 +352,8 @@ local groups = vim.tbl_extend('error', statusline_groups, {
     WinBarTargetModified = { fg = colors.orange, bold = true },
     WinBarTargetError = { fg = colors.red, bold = true },
     WinBarSeparator = { fg = colors.green },
-    WinBarNC = { bg = colors.bg, fg = colors.selection, sp = colors.bg_3, underline = true },
-    WinBarDirNC = { fg = colors.selection },
+    WinBarNC = { bg = colors.bg, fg = colors.fg_2, sp = colors.bg_3, underline = true },
+    WinBarDirNC = { fg = colors.fg_2 },
     WinBarTargetNC = { fg = colors.purple, bold = false },
     WinBarModeHighlightNC = { fg = colors.bg_3 },
 
@@ -433,11 +377,11 @@ local groups = vim.tbl_extend('error', statusline_groups, {
     IblIndent = { fg = colors.bg_3 },
 
     -- Bufferline.
-    BufferLineBufferSelected = { bg = colors.transparent_black, sp = colors.purple },
-    BufferLineTabSelected = { bg = colors.transparent_black, sp = colors.purple },
-    BufferLineCloseButtonSelected = { bg = colors.transparent_black, fg = colors.purple },
-    BufferLineIndicatorSelected = { bg = colors.transparent_black, fg = colors.purple },
-    BufferLineDevIconLuaSelected = { bg = colors.transparent_black, fg = colors.blue },
+    BufferLineBufferSelected = { bg = colors.bg_2, sp = colors.purple },
+    BufferLineTabSelected = { bg = colors.bg_2, sp = colors.purple },
+    BufferLineCloseButtonSelected = { bg = colors.bg_2, fg = colors.purple },
+    BufferLineIndicatorSelected = { bg = colors.bg_2, fg = colors.purple },
+    BufferLineDevIconLuaSelected = { bg = colors.bg_2, fg = colors.blue },
     BufferLineFileIcon = { bg = colors.bg },
     BufferLineFill = { bg = colors.bg, underline = true, sp = colors.black },
     TabLineSel = { bg = colors.purple },
@@ -490,8 +434,13 @@ local groups = vim.tbl_extend('error', statusline_groups, {
     -- CodeCompanion.
     CodeCompanionInlineDiffHint = { link = 'LspCodeLens' },
 
-    -- Windsurf
-    CodeiumSuggestion = { fg = colors.selection },
+    -- Windsurf.
+    CodeiumSuggestion = { fg = colors.fg_2 },
+
+    -- Oil.
+    OilHidden = { link = 'Conceal' },
+    OilDirHidden = { link = 'OilHidden' },
+    OilLinkTarget = { fg = colors.orange },
 })
 
 for group, opts in pairs(groups) do

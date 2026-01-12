@@ -1,0 +1,58 @@
+---@class RGB
+---@field r number A number between 0 and 255
+---@field g number A number between 0 and 255
+---@field b number A number between 0 and 255
+
+---@alias HexColor string Hex color code, eg #abc123
+---@alias Alpha number Number between 0 and 1
+
+---@class Palette
+---@field bg HexColor
+---@field bg_2 HexColor
+---@field bg_3 HexColor
+---@field fg HexColor
+---@field fg_2 HexColor
+---@field black HexColor
+---@field white HexColor
+---@field pink HexColor
+---@field red HexColor
+---@field green HexColor
+---@field yellow HexColor
+---@field blue HexColor
+---@field cyan HexColor
+---@field purple HexColor
+---@field orange HexColor
+
+---@class Colors
+---@field bg HexColor
+---@field bg_2 HexColor
+---@field bg_3 HexColor
+---@field fg HexColor
+---@field fg_2 HexColor
+---@field black HexColor
+---@field white HexColor
+---@field pink HexColor
+---@field red HexColor
+---@field green HexColor
+---@field yellow HexColor
+---@field blue HexColor
+---@field cyan HexColor
+---@field purple HexColor
+---@field orange HexColor
+---@field bright_pink HexColor
+---@field bright_red HexColor
+---@field bright_green HexColor
+---@field bright_yellow HexColor
+---@field bright_blue HexColor
+---@field bright_cyan HexColor
+---@field bright_purple HexColor
+---@field bright_white HexColor
+---@field comment HexColor
+---@field fuchsia HexColor
+---@field grey HexColor
+---@field lavender HexColor
+---@field lilac HexColor
+---@field transparent_red HexColor
+---@field transparent_green HexColor
+---@field transparent_yellow HexColor
+---@field transparent_blue HexColor

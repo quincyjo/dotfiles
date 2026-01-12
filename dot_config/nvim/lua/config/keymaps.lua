@@ -3,6 +3,7 @@ vim.keymap.set('v', '<', '<gv')
 vim.keymap.set('v', '>', '>gv')
 
 -- Keep the cursor centered while jumping.
+-- NOTE: Cinnamon keymap will override this.
 vim.keymap.set({ 'n', 'v' }, 'n', 'nzz')
 vim.keymap.set({ 'n', 'v' }, 'N', 'Nzz')
 vim.keymap.set({ 'n', 'v' }, '<C-d>', '<C-d>zz')
