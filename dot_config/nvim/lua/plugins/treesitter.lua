@@ -28,7 +28,7 @@ return {
                     },
                 },
                 config = function()
-                    vim.api.nvim_set_hl(0, 'TreesitterContextBottom', { underline = true, sp = 'Grey', fg= 'None' })
+                    vim.api.nvim_set_hl(0, 'TreesitterContextBottom', { underline = true, sp = 'Grey', fg = 'None' })
                     vim.api.nvim_set_hl(0, 'TreesitterContext', { fg = 'None' })
                     require('treesitter-context').setup {
                         -- Avoid the sticky context from growing a lot.
@@ -112,6 +112,7 @@ return {
             vim.wo.foldmethod = 'expr'
             vim.wo.foldexpr = 'v:lua.vim.treesitter.foldexpr()'
 
+            -- TODO: Similarly other configs, so using wildfire until addressed.
             --[[
             local toggle_inc_selection_group =
                 vim.api.nvim_create_augroup('quincyjo/toggle_inc_selection', { clear = true })
@@ -127,11 +128,16 @@ return {
             })
             ]]
 
-            -- TODO: ensure_isntalled seems to broken currently, or setup process has changed from documentation.
-            -- Doing this manual install call for now.
             require('nvim-treesitter.install').install(opts.ensure_installed)
-            -- TODO: Similarly other configs, so using wildfire until addressed.
             require('nvim-treesitter.config').setup(opts)
+            if opts.ensure_installed and type(opts.ensure_installed) == "table" then
+                vim.api.nvim_create_autocmd("FileType", {
+                    pattern = opts.ensure_installed,
+                    callback = function()
+                        pcall(vim.treesitter.start)
+                    end,
+                })
+            end
         end,
     },
 }
