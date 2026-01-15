@@ -1,8 +1,6 @@
--- Highlight, edit, and navigate code.
 return {
     {
         'nvim-treesitter/nvim-treesitter',
-        enabled = true,
         lazy = false,
         branch = "main",
         build = ":TSUpdate",
@@ -45,8 +43,6 @@ return {
                 end,
             },
         },
-        ---@module 'nvim-treesitter'
-        ---@type nvim-treesitter.config.TSConfig
         opts = {
             install_dir = vim.fn.stdpath('data') .. '/site',
             sync_install = false,
@@ -80,15 +76,6 @@ return {
                 'zsh',
             },
             highlight = { enable = true },
-            incremental_selection = {
-                enable = true,
-                keymaps = {
-                    init_selection = '<cr>',
-                    node_incremental = '<cr>',
-                    scope_incremental = false,
-                    node_decremental = '<bs>',
-                },
-            },
             indent = {
                 enable = true,
                 -- Treesitter unindents Yaml lists for some reason.
@@ -111,22 +98,6 @@ return {
             -- Folding
             vim.wo.foldmethod = 'expr'
             vim.wo.foldexpr = 'v:lua.vim.treesitter.foldexpr()'
-
-            -- TODO: Similarly other configs, so using wildfire until addressed.
-            --[[
-            local toggle_inc_selection_group =
-                vim.api.nvim_create_augroup('quincyjo/toggle_inc_selection', { clear = true })
-            vim.api.nvim_create_autocmd('CmdwinEnter', {
-                desc = 'Disable incremental selection when entering the cmdline window',
-                group = toggle_inc_selection_group,
-                command = 'TSBufDisable incremental_selection',
-            })
-            vim.api.nvim_create_autocmd('CmdwinLeave', {
-                desc = 'Enable incremental selection when leaving the cmdline window',
-                group = toggle_inc_selection_group,
-                command = 'TSBufEnable incremental_selection',
-            })
-            ]]
 
             require('nvim-treesitter.install').install(opts.ensure_installed)
             require('nvim-treesitter.config').setup(opts)

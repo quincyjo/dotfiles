@@ -42,21 +42,35 @@ return {
             'w', 'W', 'b', 'B',
         }
 
+        local function smart_scroll(cmd)
+            return function()
+                if vim.bo.filetype == "oil" then
+                    -- In Oil, just perform the raw motion
+                    -- We use feedkeys to ensure it feels native and avoids recursion
+                    local count = vim.v.count > 0 and vim.v.count or ""
+                    local keys = vim.api.nvim_replace_termcodes(cmd, true, false, true)
+                    vim.api.nvim_feedkeys(count .. keys, 'nv', false)
+                else
+                    -- In regular buffers, use Cinnamon
+                    require('cinnamon').scroll(cmd)
+                end
+            end
+        end
+
         for _, cmd in ipairs(centered_commands) do
             table.insert(keymaps, {
                 cmd,
-                function() require('cinnamon').scroll(cmd .. 'zz') end,
+                smart_scroll(cmd .. 'zz'),
                 mode = { 'n', 'v' }
             })
         end
         for _, cmd in ipairs(commands) do
             table.insert(keymaps, {
                 cmd,
-                function() require('cinnamon').scroll(cmd) end,
+                smart_scroll(cmd),
                 mode = { 'n', 'v' }
             })
         end
         return keymaps
     end,
 }
-

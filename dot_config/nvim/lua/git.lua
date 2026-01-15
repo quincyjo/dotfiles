@@ -2,7 +2,7 @@ local git_icons = require('icons').git
 
 local M = {}
 
--- Builds the git metrics for the target buffer.
+--- Builds the git metrics for the target buffer.
 ---@param bufnr? integer The bufnr to diff. If nil, the current buffer is used.
 ---@return string | nil The styled diff, if any.
 function M.git_diff(bufnr)
