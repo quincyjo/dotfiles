@@ -242,6 +242,9 @@ local groups = vim.tbl_extend('error', statusline_groups, {
     ['@struct'] = { fg = colors.cyan },
     ['@typeParameter'] = { fg = colors.cyan },
 
+    -- Python.
+    ['@string.documentation.python'] = { link = '@comment.documentation' },
+
     -- Package manager.
     LazyDimmed = { fg = colors.grey },
     LazyComment = { link = 'Conceal' },
