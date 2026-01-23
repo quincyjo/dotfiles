@@ -49,6 +49,11 @@ return {
                     -- We use feedkeys to ensure it feels native and avoids recursion
                     local count = vim.v.count > 0 and vim.v.count or ""
                     local keys = vim.api.nvim_replace_termcodes(cmd, true, false, true)
+                    --[[ Alternative to use cinnamon via lua code execution.
+                    local foo = string.format(":lua require'cinnamon'.scroll'%s%s'", count, cmd)
+                    local bar = foo .. vim.api.nvim_replace_termcodes('<cr>', true, false, true)
+                    vim.api.nvim_feedkeys(bar, 'nv', false)
+                    ]]
                     vim.api.nvim_feedkeys(count .. keys, 'nv', false)
                 else
                     -- In regular buffers, use Cinnamon
