@@ -1,0 +1,106 @@
+#!/usr/bin/env bash
+
+pictures_dir="$(xdg-user-dir PICTURES 2> /dev/null)"
+slice="${pictures_dir:-$HOME/Pictures}/slice.png"
+
+image=$(mktemp --tmpdir --suffix=.png lock.XXXXXXXXXX)
+trap 'rm -f "$image"' SIGINT SIGTERM EXIT
+
+screens=$(xrandr | grep -Eo '[0-9]+x[0-9]+\+[0-9]+\+[0-9]+')
+declare -a lines
+
+# slice height
+S=160
+
+# line position (from center)
+P=0
+
+for screen in $screens; do
+    read -r W H X Y < <(sed 's/[^0-9]/ /g' <<< "$screen")
+    lines+=(\( "$slice"
+        -resize "${W}x${S}!"
+        -geometry "+${X}+$((Y+H/2-P-S/2))" \)
+        -composite -matte)
+done
+
+# -scale 10% -scale 1000% 
+# -blur 0x10 
+maim -u -m 1 \
+    | convert png:- -scale 10% \
+    -brightness-contrast -8,-8 \
+    -scale 1000% \
+    -blur 0x7 \
+    -fill "#252121" -colorize 10% \
+    ${lines[*]} "$image"
+
+i3lock_options="--color=252121 \
+    --greeteroutline-color=252121FF \
+    --greeteroutline-width=2 \
+    --greeter-size=36 \
+    --greeter-font=Roboto:style=bold \
+    --image=$image \
+    --inside-color=252121FF \
+    --insidever-color=252121FF \
+    --insidewrong-color=252121FF \
+    --ring-color=252121FF \
+    --ringver-color=C3A22CFF \
+    --ringwrong-color=D3426CFF \
+    --separator-color=252121FF \
+    --line-color=EBDBB2FF \
+    --keyhl-color=EBDBB2FF \
+    --bshl-color=D3426CFF \
+    --ring-width=4 \
+    --radius=32 \
+    --ind-pos=x+w/2:y+h/2-$P \
+    --time-color=A89984FF \
+    --time-pos=ix-r-50:iy+12 \
+    --time-str=%H:%M:%S \
+    --time-font=monospace \
+    --time-align=2 \
+    --time-size=32 \
+    --date-color=A89984FF \
+    --date-pos=ix+r+50:iy+12 \
+    --date-str=%y.%m.%d \
+    --date-font=monospace \
+    --date-align=1 \
+    --date-size=32 \
+    --verif-color=00000000 \
+    --wrong-color=00000000 \
+    --modif-color=00000000 \
+    --layout-color=00000000 \
+    --verif-text='' \
+    --wrong-text='' \
+    --noinput-text='' \
+    --lock-text='' \
+    --lockfailed-text='' \
+    --greeter-text=$(whoami) \
+    --greeter-pos=ix+0:iy-60 \
+    --greeter-color=A89984FF \
+    --ignore-empty-password \
+    --pass-media-keys \
+    --pass-screen-keys \
+    --indicator \
+    --clock"
+
+if [[ -e /dev/fd/${XSS_SLEEP_LOCK_FD:--1} ]]; then
+    kill_i3lock() {
+        pkill -xu $EUID "$@" i3lock
+    }
+
+    trap kill_i3lock TERM INT
+
+    # we have to make sure the locker does not inherit a copy of the lock fd
+    i3lock $i3lock_options {XSS_SLEEP_LOCK_FD}<&-
+
+    # now close our fd (only remaining copy) to indicate we're ready to sleep
+    exec {XSS_SLEEP_LOCK_FD}<&-
+
+    while kill_i3lock -0; do
+        sleep 0.5
+    done
+else
+    trap 'kill %%' TERM INT
+    i3lock -n $i3lock_options &
+    wait
+fi
+
