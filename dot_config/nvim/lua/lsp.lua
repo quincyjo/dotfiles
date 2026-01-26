@@ -5,6 +5,14 @@ vim.g.inlay_hints = false
 
 local M = {}
 
+local function floating_width()
+    return math.floor(vim.o.columns * 0.4)
+end
+
+local function floating_height()
+    return math.floor(vim.o.lines * 0.5)
+end
+
 --- Sets up LSP keymaps and autocommands for the given buffer.
 ---@param client vim.lsp.Client
 ---@param bufnr integer
@@ -270,7 +278,7 @@ function M.setup()
                         and (diagnostic.message:sub(1, line_index - 1) .. misc_icons.ellipsis)
                         or diagnostic.message
                     local message = require('util').trim_dot_chains(first_line, 1):gsub('%s+', ' ')
-                    local truncate_to = math.floor(vim.o.columns * 0.4)
+                    local truncate_to = floating_width()
                     if #message < truncate_to then
                         return message
                     else
@@ -314,8 +322,8 @@ function M.setup()
     ---@diagnostic disable-next-line: duplicate-set-field
     vim.lsp.buf.hover = function()
         return hover {
-            max_height = math.floor(vim.o.lines * 0.5),
-            max_width = math.floor(vim.o.columns * 0.4),
+            max_height = floating_height(),
+            max_width = floating_width(),
         }
     end
 
@@ -323,8 +331,8 @@ function M.setup()
     ---@diagnostic disable-next-line: duplicate-set-field
     vim.lsp.buf.signature_help = function()
         return signature_help {
-            max_height = math.floor(vim.o.lines * 0.5),
-            max_width = math.floor(vim.o.columns * 0.4),
+            max_height = floating_height(),
+            max_width = floating_width(),
         }
     end
 
@@ -376,4 +384,3 @@ function M.setup()
 end
 
 return M
-
