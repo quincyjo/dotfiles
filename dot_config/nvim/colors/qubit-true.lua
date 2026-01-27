@@ -444,6 +444,9 @@ local groups = vim.tbl_extend('error', statusline_groups, {
     OilHidden = { link = 'Conceal' },
     OilDirHidden = { link = 'OilHidden' },
     OilLinkTarget = { fg = colors.orange },
+
+    -- Satellite.
+    SatelliteBackground = { bg = colors.bg_2 },
 })
 
 for group, opts in pairs(groups) do
