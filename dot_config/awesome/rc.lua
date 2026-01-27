@@ -78,9 +78,9 @@ run_once {
     -- Run xss-lock pointed to the lock script
     "xss-lock --transfer-sleep-lock -n dim-screen.sh -- lock",
     -- Blue filter
-    -- "redshift-gtk",
+    "redshift-gtk",
     -- Pre-load quick-access-terminal
-    -- 'kitten quick-access-terminal -o start_as_hidden=yes kitten run-shell zsh -c "neofetch;eza --color=always --icons=always --classify=always --group-directories-first -w=999 -D"'
+    'kitten quick-access-terminal -o start_as_hidden=yes kitten run-shell zsh -c "neofetch;eza --color=always --icons=always --classify=always --group-directories-first -w=999 -D"'
 }
 
 -- This function implements the XDG autostart specification
