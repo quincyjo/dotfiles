@@ -33,6 +33,7 @@ return {
                         end
                     end
 
+                    --[[ Disabled in favour of lazydev.
                     local path = vim.fn.expand("$HOME/.local/share/nvim/lazy")
                     local content = vim.fn.readdir(path)
                     local libraries = { vim.env.VIMRUNTIME }
@@ -48,6 +49,7 @@ return {
                             end
                         end
                     end
+                    ]]
 
                     client.config.settings.Lua = vim.tbl_deep_extend('force', client.config.settings.Lua, {
                         runtime = {
@@ -62,7 +64,7 @@ return {
                         -- Make the server aware of Neovim runtime files
                         workspace = {
                             checkThirdParty = false,
-                            library = libraries,
+                            -- library = libraries,
                         }
                     })
                 end,

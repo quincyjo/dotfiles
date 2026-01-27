@@ -371,13 +371,13 @@ globalkeys = mytable.join(
         { description = "view  previous nonempty", group = "tag" }),
 
     -- Default client focus
-    awful.key({ altkey, }, "j",
+    awful.key({ modkey, altkey, }, "j",
         function()
             awful.client.focus.byidx(1)
         end,
         { description = "focus next by index", group = "client" }
     ),
-    awful.key({ altkey, }, "k",
+    awful.key({ modkey, altkey, }, "k",
         function()
             awful.client.focus.byidx(-1)
         end,
@@ -508,7 +508,7 @@ globalkeys = mytable.join(
     -- Widgets popups
     -- awful.key({ altkey, }, "c", function () if beautiful.cal then beautiful.cal.show(7) end end,
     -- {description = "show calendar", group = "widgets"}),
-    awful.key({ altkey, }, "h", function() awful.spawn.with_shell(terminal .. ' --title "File System" vifm $HOME') end,
+    awful.key({ modkey, altkey, }, "h", function() awful.spawn.with_shell(terminal .. ' --title "File System" vifm $HOME') end,
         { description = "show filesystem", group = "widgets" }),
     awful.key({ "Control", "Shift", }, "h",
         function() awful.spawn(terminal .. ' btop') end,

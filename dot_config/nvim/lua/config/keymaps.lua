@@ -46,10 +46,11 @@ vim.keymap.set('n', '<leader>tn', '<cmd>tabnew<cr>', { desc = 'New tab page' })
 vim.keymap.set('n', '<leader>to', '<cmd>tabonly<cr>', { desc = 'Close other tab pages' })
 
 -- Escape binding
-vim.keymap.set({ 'i', 'v', 's' }, "<C-k>", "<Esc>", {})
+vim.keymap.set({'i', 'v', 's'}, "<C-k>", "<Esc>", {})
 
-vim.keymap.set('n', '<A-j>', '<cmd>m .+1<cr>==', { desc = 'Move current line down' })
-vim.keymap.set('n', '<A-k>', '<cmd>m .-2<cr>==', { desc = 'Move current line up' })
+-- Move lines, dropped for minimove.
+-- vim.keymap.set('n', '<A-j>', '<cmd>m .+1<cr>==', { desc = 'Move current line down' })
+-- vim.keymap.set('n', '<A-k>', '<cmd>m .-2<cr>==', { desc = 'Move current line up' })
 
 vim.keymap.set({ 'i', 'n', 'v' }, '<C-s>', '<esc>:w<cr>', { desc = 'Exit insert mode and save changes' })
 

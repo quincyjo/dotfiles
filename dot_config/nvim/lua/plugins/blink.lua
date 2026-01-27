@@ -40,9 +40,14 @@ return {
             },
             snippets = { preset = 'luasnip' },
             sources = {
-                default = { 'lsp', 'path', 'snippets', 'buffer', 'codeium' },
+                default = { 'lsp', 'path', 'snippets', 'buffer', 'codeium', 'lazydev' },
                 providers = {
                     codeium = { name = 'Codeium', module = 'codeium.blink', async = true },
+                    lazydev = {
+                        name = "LazyDev",
+                        module = "lazydev.integrations.blink",
+                        score_offset = 100,
+                    },
                 },
                 per_filetype = {
                     oil = { 'path', 'buffer' },
