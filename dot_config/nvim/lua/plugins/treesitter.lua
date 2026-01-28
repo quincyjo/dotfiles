@@ -90,11 +90,6 @@ return {
             end,
         },
         config = function(_, opts)
-            vim.api.nvim_create_autocmd('FileType', {
-                pattern = { 'scala', 'lua' },
-                callback = function() vim.treesitter.start() end,
-            })
-
             -- Folding
             vim.wo.foldmethod = 'expr'
             vim.wo.foldexpr = 'v:lua.vim.treesitter.foldexpr()'
