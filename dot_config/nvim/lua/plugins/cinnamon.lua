@@ -22,7 +22,8 @@ return {
     keys = function()
         local keymaps = {}
         local centered_commands = {
-            -- For some reason this makes it jump to nonexistent results.
+            -- For some reason this makes it jump to nonexistent results in
+            -- certain non-normal buffer types, eg help.
             'n', 'N',
             '<C-o>', '<C-i>',
             '<C-d>', '<C-u>',
