@@ -20,7 +20,7 @@ local M = {
 }
 ]]
 
--- Targetting contrast of 7 for colours.
+-- Targetting AAA contrast of 7 for colours against bg_2
 ---@type Palette
 local M = {
     black = '#0a0909',
@@ -30,15 +30,14 @@ local M = {
     bg_3 = '#464442',
     fg = '#d7d4d2',
     fg_2 = '#656260',
-    pink = '#e689b1',
+    pink = '#e495b7', -- '#df98b7',
     -- Unfinal, contrast of 5. Red is hard twt 
-    red = '#f04c8b', -- #ff3e6c', #f04c8b
-    green = '#90b05c',
-    yellow = '#bea44b',
-    blue = '#67b1cc',
-    cyan = '#74b1ad',
-    purple = '#b69bd3',
-    orange = '#e58f7c',
+    red =  '#f04c8b',
+    green = '#7eba7d', -- '#7cbc7b', -- '#a0c16a',
+    yellow = '#c2ac63', -- '#c2ad69',
+    blue = '#7ab7cb',
+    cyan = '#7eb7b2', -- '#58bda6', -- '#7eb7b2',
+    purple = '#bca3d7', -- '#bba5d3',
+    orange = '#ea9785', -- '#e49b8b',
 }
-
 return M

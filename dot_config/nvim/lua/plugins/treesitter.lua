@@ -94,9 +94,9 @@ return {
             vim.wo.foldmethod = 'expr'
             vim.wo.foldexpr = 'v:lua.vim.treesitter.foldexpr()'
 
-            require('nvim-treesitter.install').install(opts.ensure_installed)
             require('nvim-treesitter.config').setup(opts)
             if opts.ensure_installed and type(opts.ensure_installed) == "table" then
+                require('nvim-treesitter.install').install(opts.ensure_installed)
                 vim.api.nvim_create_autocmd("FileType", {
                     pattern = opts.ensure_installed,
                     callback = function()

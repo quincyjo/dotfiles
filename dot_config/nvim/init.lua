@@ -20,4 +20,3 @@ require('lsp').setup()
 
 -- Load lazy.nvim.
 require('config.lazy')
-

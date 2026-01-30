@@ -2,6 +2,11 @@
 ---@field r number A number between 0 and 255
 ---@field g number A number between 0 and 255
 ---@field b number A number between 0 and 255
+---
+---@class HSL
+---@field h number A number between 0 and 360
+---@field s number A number between 0 and 1
+---@field l number A number between 0 and 1
 
 ---@alias HexColor string Hex color code, eg #abc123
 ---@alias Alpha number Number between 0 and 1

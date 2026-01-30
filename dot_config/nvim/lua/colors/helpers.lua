@@ -1,5 +1,14 @@
 local M = {}
 
+--- Helper function to clamp a value between a min and max
+---@param value number
+---@param min_val number
+---@param max_val number
+---@return number
+local function clamp(value, min_val, max_val)
+    return math.max(min_val, math.min(max_val, value))
+end
+
 ---@param hex HexColor
 ---@return RGB
 local function hex_to_rgb(hex)
@@ -23,7 +32,6 @@ end
 ---@param amt number
 ---@return HexColor
 function M.lighten(hex, amt)
-    -- stylua: ignore
     if hex == "NONE" then return hex end
 
     local rgb = hex_to_rgb(hex)
@@ -31,9 +39,9 @@ function M.lighten(hex, amt)
     rgb.r = rgb.r + amt * (rgb.r / max)
     rgb.g = rgb.g + amt * (rgb.g / max)
     rgb.b = rgb.b + amt * (rgb.b / max)
-    rgb.r = (rgb.r < 0) and 0 or (rgb.r > 255) and 255 or rgb.r
-    rgb.g = (rgb.g < 0) and 0 or (rgb.g > 255) and 255 or rgb.g
-    rgb.b = (rgb.b < 0) and 0 or (rgb.b > 255) and 255 or rgb.b
+    rgb.r = clamp(rgb.r, 0, 255)
+    rgb.g = clamp(rgb.g, 0, 255)
+    rgb.b = clamp(rgb.b, 0, 255)
     return rgb_to_hex(rgb)
 end
 
@@ -60,6 +68,80 @@ function M.blend(hex, alpha, base)
 
     local rgb = hex_to_rgb(hex)
     return M.rgba(rgb, alpha, base or '#000000')
+end
+
+--- Convert RGB to HSL.
+---@param rgb RGB
+---@return HSL
+local function rgb_to_hsl(rgb)
+    local r, g, b = rgb.r / 255, rgb.g / 255, rgb.b / 255
+    local max = math.max(r, g, b)
+    local min = math.min(r, g, b)
+    local h, s, l = 0, 0, (max + min) / 2
+
+    if max ~= min then
+        local d = max - min
+        s = l > 0.5 and d / (2 - max - min) or d / (max + min)
+        if max == r then
+            h = (g - b) / d + (g < b and 6 or 0)
+        elseif max == g then
+            h = (b - r) / d + 2
+        elseif max == b then
+            h = (r - g) / d + 4
+        end
+        h = h / 6
+    end
+    return {
+        h = h * 360,
+        s = s,
+        l = l,
+    }
+end
+
+--- Convert HSL to RGB
+---@param hsl HSL
+---@return RGB
+local function hsl_to_rgb(hsl)
+    local h = hsl.h / 360 -- scale to 0-1
+    local r, g, b
+    if hsl.s == 0 then    -- achromatic
+        r, g, b = hsl.l, hsl.l, hsl.l
+    else
+        local function hue2rgb(p, q, t)
+            if t < 0 then t = t + 1 end
+            if t > 1 then t = t - 1 end
+            if t < 1 / 6 then return p + (q - p) * 6 * t end
+            if t < 1 / 2 then return q end
+            if t < 2 / 3 then return p + (q - p) * (2 / 3 - t) * 6 end
+            return p
+        end
+        local q = hsl.l < 0.5 and hsl.l * (1 + hsl.s) or hsl.l + hsl.s - hsl.l * hsl.s
+        local p = 2 * hsl.l - q
+        r = hue2rgb(p, q, h + 1 / 3)
+        g = hue2rgb(p, q, h)
+        b = hue2rgb(p, q, h - 1 / 3)
+    end
+    return {
+        r = r * 255,
+        g = g * 255,
+        b = b * 255,
+    }
+end
+
+--- Main function to adjust lightness and saturation of a hex color
+---@param color HexColor
+---@param lightness_adj? number 0 to 1
+---@param saturation_adj? number 0 to 1
+---@return HexColor
+function M.adjust_hex_color_hsl(color, saturation_adj, lightness_adj)
+    local rgb = hex_to_rgb(color)
+    local hsl = rgb_to_hsl(rgb)
+
+    hsl.s = clamp(hsl.s + (saturation_adj or 0), 0, 1)
+    hsl.l = clamp(hsl.l + (lightness_adj or 0), 0, 1)
+
+    rgb = hsl_to_rgb(hsl)
+    return rgb_to_hex(rgb)
 end
 
 ---@param palette Palette

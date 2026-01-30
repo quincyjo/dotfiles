@@ -423,7 +423,7 @@ local groups = vim.tbl_extend('error', statusline_groups, {
     OverseerComponent = { link = '@keyword' },
 
     -- Rainbow Delimeters.
-    RainbowDelimiterRed = { fg = colors.red },
+    RainbowDelimiterRed = { fg = colors.pink },
     RainbowDelimiterYellow = { fg = colors.yellow },
     RainbowDelimiterCyan = { fg = colors.cyan },
     RainbowDelimiterOrange = { fg = colors.orange },
@@ -447,6 +447,10 @@ local groups = vim.tbl_extend('error', statusline_groups, {
 
     -- Satellite.
     SatelliteBackground = { bg = colors.bg_2 },
+
+    -- Neotree.
+    NeoTreeTabActive = { bg = colors.bg_2, fg = colors.purple },
+    NeoTreeTabSeparatorActive = { bg = colors.bg_2, fg = colors.black },
 })
 
 for group, opts in pairs(groups) do
