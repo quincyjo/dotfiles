@@ -34,10 +34,10 @@ local M = {
     -- Unfinal, contrast of 5. Red is hard twt 
     red =  '#f04c8b',
     green = '#7eba7d', -- '#7cbc7b', -- '#a0c16a',
-    yellow = '#c2ac63', -- '#c2ad69',
-    blue = '#7ab7cb',
-    cyan = '#7eb7b2', -- '#58bda6', -- '#7eb7b2',
-    purple = '#bca3d7', -- '#bba5d3',
+    yellow = '#c4ad61', -- '#c2ac63', -- '#c2ad69',
+    blue = '#79b8cc', -- '#7ab7cb',
+    cyan = '#71bcb5', -- '#7eb7b2', -- '#58bda6'
+    purple = '#bea5db', -- '#bca3d7', -- '#bba5d3',
     orange = '#ea9785', -- '#e49b8b',
 }
 return M
