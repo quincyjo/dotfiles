@@ -16,7 +16,13 @@ return {
                                 return '[c'
                             else
                                 vim.schedule(function()
-                                    require('treesitter-context').go_to_context()
+                                    if package.loaded['cinnamon'] then
+                                        require('cinnamon').scroll(
+                                            require('treesitter-context').go_to_context
+                                        )
+                                    else
+                                        require('treesitter-context').go_to_context()
+                                    end
                                 end)
                                 return '<Ignore>'
                             end
