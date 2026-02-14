@@ -63,7 +63,6 @@ return {
                 'javascript',
                 'json',
                 'json5',
-                'jsonc',
                 'haskell',
                 'lua',
                 'markdown',
