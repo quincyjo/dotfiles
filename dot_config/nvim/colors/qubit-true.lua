@@ -244,6 +244,7 @@ local groups = vim.tbl_extend('error', statusline_groups, {
 
     -- Python.
     ['@string.documentation.python'] = { link = '@comment.documentation' },
+    ['@lsp.typemod.string.documentation.python'] = { link = '@comment.documentation' },
 
     -- Package manager.
     LazyDimmed = { fg = colors.grey },
