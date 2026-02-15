@@ -368,7 +368,11 @@
 
   #####################################[ vcs: git status ]######################################
   # Version control background colors.
-  typeset -g POWERLEVEL9K_VCS_FOREGROUND=4
+  typeset -g POWERLEVEL9K_VCS_CLEAN_FOREGROUND=4
+  typeset -g POWERLEVEL9K_VCS_MODIFIED_FOREGROUND=14
+  typeset -g POWERLEVEL9K_VCS_UNTRACKED_FOREGROUND=5
+  typeset -g POWERLEVEL9K_VCS_CONFLICTED_FOREGROUND=1
+  typeset -g POWERLEVEL9K_VCS_LOADING_FOREGROUND=4
   typeset -g POWERLEVEL9K_VCS_CLEAN_BACKGROUND=0
   typeset -g POWERLEVEL9K_VCS_MODIFIED_BACKGROUND=0
   typeset -g POWERLEVEL9K_VCS_UNTRACKED_BACKGROUND=0
@@ -403,8 +407,8 @@
     # Styling for different parts of Git status.
     local       meta='%7F' # white foreground
     local      clean='%4F' # black foreground
-    local   modified='%4F' # black foreground
-    local  untracked='%4F' # black foreground
+    local   modified='%14F' # black foreground
+    local  untracked='%5F' # black foreground
     local conflicted='%1F' # red foreground
 
     local res
@@ -559,6 +563,9 @@
   typeset -g POWERLEVEL9K_STATUS_ERROR_PIPE_FOREGROUND=15
   typeset -g POWERLEVEL9K_STATUS_ERROR_PIPE_BACKGROUND=1
 
+  # End with powerline arrow if status is last right segment.
+  typeset -g POWERLEVEL9K_STATUS_RIGHT_PROMPT_LAST_SEGMENT_END_SYMBOL='\ue0b0'
+
   ###################[ command_execution_time: duration of the last command ]###################
   # Execution time color.
   typeset -g POWERLEVEL9K_COMMAND_EXECUTION_TIME_FOREGROUND=7
@@ -569,6 +576,9 @@
   typeset -g POWERLEVEL9K_COMMAND_EXECUTION_TIME_PRECISION=0
   # Duration format: 1d 2h 3m 4s.
   typeset -g POWERLEVEL9K_COMMAND_EXECUTION_TIME_FORMAT='d h m s'
+  typeset -g POWERLEVEL9K_COMMAND_EXECUTION_TIME_RIGHT_SEGMENT_SEPARATOR='\ue0b6'
+  # Start with half circle separator if it's the first segment.
+  typeset -g POWERLEVEL9K_COMMAND_EXECUTION_TIME_RIGHT_PROMPT_FIRST_SEGMENT_START_SYMBOL='\uE0B6'
   # Custom icon.
   # typeset -g POWERLEVEL9K_COMMAND_EXECUTION_TIME_VISUAL_IDENTIFIER_EXPANSION='⭐'
   # Custom prefix.
