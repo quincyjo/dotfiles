@@ -15,14 +15,14 @@ local palette  = {
     bg_3 = '#464442',
     fg = '#d7d4d2',
     fg_2 = '#656260',
-    pink = '#d3729c',
-    red = '#d3426c',
-    green = '#8aac54',
-    yellow = '#c3a22c',
-    blue = '#51a5c5',
-    cyan = '#62a7a3',
-    purple = '#b69bd3',
-    orange = '#e3826c',
+    pink = '#e495b7',
+    red =  '#f04c8b',
+    green = '#7eba7d',
+    yellow = '#c4ad61',
+    blue = '#79b8cc',
+    cyan = '#71bcb5',
+    purple = '#bea5db',
+    orange = '#ea9785',
 }
 
 ---@alias HexColor string
