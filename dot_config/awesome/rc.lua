@@ -511,7 +511,7 @@ globalkeys = mytable.join(
     awful.key({ modkey, altkey, }, "h", function() awful.spawn.with_shell(terminal .. ' --title "File System" vifm $HOME') end,
         { description = "show filesystem", group = "widgets" }),
     awful.key({ "Control", "Shift", }, "h",
-        function() awful.spawn(terminal .. ' btop') end,
+        function() awful.spawn(terminal .. ' --title "Top" btop') end,
         { description = "show processes", group = "widgets" }),
     awful.key({ altkey, }, "w", function() if beautiful.weather then beautiful.weather.show(7) end end,
         { description = "show weather", group = "widgets" }),
