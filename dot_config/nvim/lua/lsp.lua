@@ -13,6 +13,21 @@ local function floating_height()
     return math.floor(vim.o.lines * 0.5)
 end
 
+--- Returns a filter function that deduplicates LSP locations by (filename, lnum, col).
+--- Each call returns a fresh filter with its own seen-set, scoped to one LSP request.
+---@return fun(item: {filename: string, lnum: integer, col: integer}): boolean
+local function make_location_dedup_filter()
+    local seen = {}
+    return function(item)
+        local key = item.filename .. ':' .. item.lnum .. ':' .. item.col
+        if seen[key] then
+            return false
+        end
+        seen[key] = true
+        return true
+    end
+end
+
 --- Sets up LSP keymaps and autocommands for the given buffer.
 ---@param client vim.lsp.Client
 ---@param bufnr integer
@@ -85,19 +100,30 @@ local function on_attach(client, bufnr)
     end
 
     if client:supports_method('textDocument/references') then
-        keymap('grr', '<cmd>FzfLua lsp_references<cr>', 'vim.lsp.buf.references()')
+        keymap('grr', function()
+            require('fzf-lua').lsp_references { regex_filter = make_location_dedup_filter() }
+        end, 'vim.lsp.buf.references()')
     end
 
     if client:supports_method('textDocument/typeDefinition') then
-        keymap('gy', '<cmd>FzfLua lsp_typedefs<cr>', 'Go to type definition')
+        keymap('gy', function()
+            require('fzf-lua').lsp_typedefs {
+                jump1 = true,
+                regex_filter = make_location_dedup_filter(),
+            }
+        end, 'Go to type definition')
     end
 
     if client:supports_method('textDocument/documentSymbol') then
-        keymap('gs', '<cmd>FzfLua lsp_document_symbols<cr>', 'Document symbols')
+        keymap('gs', function()
+            require('fzf-lua').lsp_document_symbols { regex_filter = make_location_dedup_filter() }
+        end, 'Document symbols')
     end
 
     if client:supports_method('workspace/symbol') then
-        keymap('gws', '<cmd>FzfLua lsp_workplace_symbols<cr>', 'Workplace symbols')
+        keymap('gws', function()
+            require('fzf-lua').lsp_live_workspace_symbols { regex_filter = make_location_dedup_filter() }
+        end, 'Workplace symbols')
     end
 
     if client:supports_method('textDocument/hover') then
@@ -111,11 +137,17 @@ local function on_attach(client, bufnr)
     if client:supports_method('textDocument/definition') then
         keymap('gd', function()
             require('cinnamon').scroll(function()
-                require('fzf-lua').lsp_definitions { jump1 = true }
+                require('fzf-lua').lsp_definitions {
+                    jump1 = true,
+                    regex_filter = make_location_dedup_filter(),
+                }
             end)
         end, 'Go to definition')
         keymap('gD', function()
-            require('fzf-lua').lsp_definitions { jump1 = false }
+            require('fzf-lua').lsp_definitions {
+                jump1 = false,
+                regex_filter = make_location_dedup_filter(),
+            }
         end, 'Peek definition')
     end
 
