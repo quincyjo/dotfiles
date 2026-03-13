@@ -8,7 +8,7 @@ return {
         },
         modes = {
             char = { enabled = false },
-            search = { enabled = true }
+            search = { enabled = false }
         },
     },
     keys = {
