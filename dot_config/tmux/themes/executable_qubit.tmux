@@ -81,11 +81,10 @@ tmux_set status-right-length 150
 tmux_set @prefix_highlight_show_copy_mode    'on'
 tmux_set @prefix_highlight_show_sync_mode    'on'
 tmux_set @prefix_highlight_empty_has_affixes 'on'
-tmux_set @prefix_highlight_copy_mode_attr    "fg=$COLOR_FG_2,bg=$COLOR_3,bold"
-tmux_set @prefix_highlight_sync_mode_attr    "fg=$COLOR_FG_2,bg=$COLOR_2,bold"
+tmux_set @prefix_highlight_copy_mode_attr    "fg=$COLOR_BG_2,bg=$COLOR_3,bold"
+tmux_set @prefix_highlight_sync_mode_attr    "fg=$COLOR_BG_2,bg=$COLOR_2,bold"
 tmux_set @prefix_highlight_empty_attr        "fg=$COLOR_FG_2,bg=$COLOR_GUTTER,bold"
 tmux_set @prefix_highlight_attr              "fg=$COLOR_BG,bg=$COLOR_1,bold"
-# highlight seems to be adding a leading space, so we trim that here
 tmux_set @prefix_highlight_empty_prompt      ' TMUX '
 tmux_set @prefix_highlight_prefix_prompt     '  󰘴A  '
 tmux_set @prefix_highlight_copy_prompt       '  C  '
