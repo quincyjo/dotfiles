@@ -45,12 +45,14 @@ return {
 
         local function smart_scroll(cmd)
             return function()
-                if vim.bo.filetype == "oil" then
-                    -- In Oil, just perform the raw motion
-                    -- We use feedkeys to ensure it feels native and avoids recursion
+                local ft = vim.bo.filetype
+                if vim.tbl_contains({ "oil", "markdown", "codecompanion" }, ft) then
+                    -- In oil or markview buffers, those plugins inturrupt Cinnamon and motions don't complete.
                     local count = vim.v.count > 0 and vim.v.count or ""
                     local keys = vim.api.nvim_replace_termcodes(cmd, true, false, true)
-                    --[[ Alternative to use cinnamon via lua code execution.
+                    -- Alternative to use cinnamon via lua code execution.
+                    -- Works on oil buffers, but not md with markview.
+                    --[[
                     local foo = string.format(":lua require'cinnamon'.scroll'%s%s'", count, cmd)
                     local bar = foo .. vim.api.nvim_replace_termcodes('<cr>', true, false, true)
                     vim.api.nvim_feedkeys(bar, 'nv', false)
