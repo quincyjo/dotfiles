@@ -1,10 +1,3 @@
---[[
-
-     Awesome WM configuration template
-     github.com/lcpz
-
---]]
-
 -- {{{ Required libraries
 
 -- If LuaRocks is installed, make sure that packages installed through it are
@@ -78,9 +71,9 @@ run_once {
     -- Run xss-lock pointed to the lock script
     "xss-lock --transfer-sleep-lock -n dim-screen.sh -- lock",
     -- Blue filter
-    "redshift-gtk",
+    -- "redshift-gtk",
     -- Pre-load quick-access-terminal
-    'kitten quick-access-terminal -o start_as_hidden=yes kitten run-shell zsh -c "neofetch;eza --color=always --icons=always --classify=always --group-directories-first -w=999 -D"'
+    -- 'kitten quick-access-terminal -o start_as_hidden=yes kitten run-shell zsh -c "neofetch;eza --color=always --icons=always --classify=always --group-directories-first -w=999 -D"'
 }
 
 -- This function implements the XDG autostart specification
@@ -368,7 +361,7 @@ globalkeys = mytable.join(
     awful.key({ altkey }, "Left", function() lain.util.tag_view_nonempty(-1) end,
         { description = "view  previous nonempty", group = "tag" }),
     awful.key({ altkey }, "Right", function() lain.util.tag_view_nonempty(1) end,
-        { description = "view  previous nonempty", group = "tag" }),
+        { description = "view  next nonempty", group = "tag" }),
 
     -- Default client focus
     awful.key({ modkey, altkey, }, "j",
@@ -525,19 +518,19 @@ globalkeys = mytable.join(
         { description = "-10%", group = "hotkeys" }),
 
     -- ALSA volume control
-    awful.key({ altkey }, "Up",
+    awful.key({}, "XF86AudioRaiseVolume",
         function()
-            os.execute(string.format("amixer -q set %s 1%%+", beautiful.volume.channel))
+            os.execute(string.format("amixer -q set %s 5%%+ on", beautiful.volume.channel))
             beautiful.volume.update()
         end,
         { description = "volume up", group = "hotkeys" }),
-    awful.key({ altkey }, "Down",
+    awful.key({}, "XF86AudioLowerVolume",
         function()
-            os.execute(string.format("amixer -q set %s 1%%-", beautiful.volume.channel))
+            os.execute(string.format("amixer -q set %s 5%%- on", beautiful.volume.channel))
             beautiful.volume.update()
         end,
         { description = "volume down", group = "hotkeys" }),
-    awful.key({ altkey }, "m",
+    awful.key({}, "XF86AudioMute",
         function()
             os.execute(string.format("amixer -q set %s toggle",
                 beautiful.volume.togglechannel or beautiful.volume.channel))

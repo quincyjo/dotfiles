@@ -16,7 +16,7 @@ local palette  = {
     fg = '#d7d4d2',
     fg_2 = '#656260',
     pink = '#e495b7',
-    red =  '#f04c8b',
+    red = '#f04c8b',
     green = '#7eba7d',
     yellow = '#c4ad61',
     blue = '#79b8cc',
@@ -244,10 +244,181 @@ theme.mail = lain.widget.imap({
 })
 --]]
 
+-- Volume popup
+local volume_icon        = wibox.widget.textbox()
+local volume_level       = wibox.widget.textbox()
+local volume_popup       = nil
+local current_volume     = 0
+local current_muted      = false
+local updating_slider    = false
+local volume_initialized = false
+local volume_widget_geo  = nil
+
+local volume_hide_timer = gears.timer {
+    timeout     = 2,
+    single_shot = true,
+    callback    = function()
+        if volume_popup then volume_popup.visible = false end
+    end,
+}
+
+local arrow_size    = dpi(8)
+local bubble_shape  = function(cr, width, height)
+    gears.shape.infobubble(cr, width, height, dpi(6), arrow_size, width / 2 - arrow_size)
+end
+
+local function show_volume_popup(mode)
+    if not volume_popup then
+        local progress = wibox.widget {
+            max_value        = 100,
+            value            = 0,
+            forced_height    = dpi(4),
+            forced_width     = dpi(160),
+            bar_shape        = gears.shape.rounded_rect,
+            color            = palette.blue,
+            background_color = palette.bg_3,
+            widget           = wibox.widget.progressbar,
+        }
+        local slider = wibox.widget {
+            minimum       = 0,
+            maximum       = 100,
+            value         = 0,
+            forced_height = dpi(16),
+            forced_width  = dpi(160),
+            bar_shape     = gears.shape.rounded_rect,
+            bar_height    = dpi(4),
+            bar_color     = "#00000000",
+            handle_shape  = gears.shape.circle,
+            handle_color  = palette.blue,
+            handle_width  = dpi(12),
+            widget        = wibox.widget.slider,
+        }
+        slider:connect_signal("property::value", function()
+            if updating_slider then return end
+            progress.value = slider.value
+            os.execute(string.format("amixer -q set %s %d%%",
+                theme.volume.channel, math.floor(slider.value)))
+            theme.volume.update()
+        end)
+        local content_margin = wibox.container.margin(
+            wibox.widget {
+                volume_icon,
+                {
+                    {
+                        progress,
+                        -- Center bar vertically (16-4)/2=6, inset by half handle width 12/2=6
+                        left = dpi(6), right = dpi(6), top = dpi(6), bottom = dpi(6),
+                        widget = wibox.container.margin,
+                    },
+                    slider,
+                    layout = wibox.layout.stack,
+                },
+                volume_level,
+                layout  = wibox.layout.fixed.horizontal,
+                spacing = dpi(4),
+            },
+            dpi(12), dpi(12), arrow_size + dpi(10), dpi(10)
+        )
+        volume_popup = awful.popup {
+            widget       = content_margin,
+            bg           = palette.bg,
+            shape        = bubble_shape,
+            border_width = dpi(1),
+            border_color = palette.bg_2,
+            visible      = false,
+            ontop        = true,
+        }
+        volume_popup._slider   = slider
+        volume_popup._progress = progress
+        volume_popup._margin   = content_margin
+        volume_popup:connect_signal("mouse::enter", function() volume_hide_timer:stop() end)
+        volume_popup:connect_signal("mouse::leave", function() volume_hide_timer:again() end)
+    end
+
+    local s = awful.screen.focused()
+
+    updating_slider = true
+    volume_popup._slider.value   = current_volume
+    volume_popup._progress.value = current_volume
+    updating_slider = false
+
+    if mode == "button" and volume_widget_geo then
+        volume_popup.shape       = bubble_shape
+        volume_popup._margin.top = arrow_size + dpi(10)
+        -- Read actual width after show; renders after this Lua call returns so no flicker.
+        local popup_w = volume_popup:geometry().width
+        local px = volume_widget_geo.x + math.floor((volume_widget_geo.width - popup_w) / 2)
+        volume_popup.x = math.max(s.geometry.x, math.min(px, s.geometry.x + s.geometry.width - popup_w))
+        volume_popup.y = volume_widget_geo.y + volume_widget_geo.height + dpi(4)
+    else
+        volume_popup.shape       = gears.shape.rounded_rect
+        volume_popup._margin.top = dpi(10)
+        awful.placement.top(volume_popup, {
+            margins = { top = dpi(24) },
+            parent  = s,
+        })
+    end
+
+    volume_popup.visible = true
+    volume_hide_timer:again()
+end
+
+local function toggle_volume_popup()
+    if volume_popup and volume_popup.visible then
+        volume_hide_timer:stop()
+        volume_popup.visible = false
+    else
+        show_volume_popup("button")
+    end
+end
+
+volume_icon:connect_signal("mouse::enter", function()
+    volume_widget_geo = mouse.current_widget_geometry
+end)
+volume_icon:buttons(my_table.join(awful.button({}, 1, toggle_volume_popup)))
+
 -- ALSA volume
 theme.volume = lain.widget.alsabar({
     --togglechannel = "IEC958,3",
     notification_preset = { font = "Terminus 10", fg = theme.fg_normal },
+    settings = function()
+        local level   = volume_now.level
+        local muted   = volume_now.status == "off"
+        local icon    = muted and '󰖁' or (level < 30 and '󰕿' or level < 70 and '󰖀' or '󰕾')
+        local changed = level ~= current_volume or muted ~= current_muted
+        current_volume = level
+        current_muted  = muted
+        volume_icon:set_markup(
+            markup.font(theme.font, icon .. ' ')
+        )
+        volume_level:set_markup(
+            markup.font(theme.font, muted and '✕' or string.format('%d%%', level))
+        )
+        if not volume_initialized then
+            volume_initialized = true
+            return
+        end
+        if not changed then return end
+        if volume_popup and volume_popup.visible then
+            -- Already open: sync slider and refresh timer
+            updating_slider = true
+            volume_popup._slider.value   = level
+            volume_popup._progress.value = level
+            updating_slider = false
+            volume_hide_timer:again()
+        else
+            show_volume_popup("change")
+        end
+        if volume_popup then
+            if muted then
+                volume_popup._slider.handle_color = palette.fg_2
+                volume_popup._progress.color = palette.fg_2
+            else
+                volume_popup._slider.handle_color = palette.blue
+                volume_popup._progress.color = palette.blue
+            end
+        end
+    end,
 })
 
 -- MPD
@@ -498,6 +669,10 @@ local segments = {
         color = palette.orange
     },
     ]]
+    {
+        widget = volume_icon,
+        color = palette.yellow
+    },
     {
         widget = wibox.widget { bat.widget, layout = wibox.layout.align.horizontal },
         color = palette.cyan
