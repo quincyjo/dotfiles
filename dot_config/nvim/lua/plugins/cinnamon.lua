@@ -23,7 +23,7 @@ return {
         local keymaps = {}
         local centered_commands = {
             -- For some reason this makes it jump to nonexistent results in
-            -- certain non-normal buffer types, eg help.
+            -- certain non-normal buffer types, EG help.
             'n', 'N',
             '<C-o>', '<C-i>',
             '<C-d>', '<C-u>',
@@ -31,6 +31,7 @@ return {
             '}', '{',
             ')', '(',
             '*', '#',
+            ']s', '[s',
         }
         local commands = {
             'zt', 'zb', 'zz',
@@ -47,7 +48,7 @@ return {
             return function()
                 local ft = vim.bo.filetype
                 if vim.tbl_contains({ "oil", "markdown", "codecompanion" }, ft) then
-                    -- In oil or markview buffers, those plugins inturrupt Cinnamon and motions don't complete.
+                    -- In oil or markview buffers, those plugins interrupt Cinnamon and motions don't complete.
                     local count = vim.v.count > 0 and vim.v.count or ""
                     local keys = vim.api.nvim_replace_termcodes(cmd, true, false, true)
                     -- Alternative to use cinnamon via lua code execution.

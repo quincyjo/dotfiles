@@ -1,4 +1,4 @@
-local arrows = require('icons').arrows
+local arrows = require("icons").arrows
 
 -- Leader
 vim.g.mapleader = " "
@@ -20,15 +20,15 @@ vim.opt.shiftwidth = 4
 vim.opt.expandtab = true
 
 -- Folding
-vim.opt.foldcolumn = '1'
+vim.opt.foldcolumn = "1"
 vim.opt.foldlevelstart = 99
-vim.wo.foldtext = ''
+vim.wo.foldtext = ""
 vim.opt.fillchars = {
-    fold = ' ',
-    foldclose = arrows.right,
-    foldopen = arrows.down,
-    foldsep = ' ',
-    foldinner = ' '
+	fold = " ",
+	foldclose = arrows.right,
+	foldopen = arrows.down,
+	foldsep = " ",
+	foldinner = " ",
 }
 
 -- Global statusline
@@ -51,10 +51,11 @@ vim.opt.ttimeoutlen = 10
 -- Highlight cursorline
 vim.opt.cursorline = true
 
-vim.opt.sessionoptions="blank,buffers,curdir,folds,help,tabpages,winsize,winpos,terminal,localoptions"
+-- Spell check.
+vim.opt.spell = true
+vim.opt.spelllang:append("en_us")
+vim.opt.spelloptions:append("camel")
+
+vim.opt.sessionoptions = "blank,buffers,curdir,folds,help,tabpages,winsize,winpos,terminal,localoptions"
 
 vim.cmd("colorscheme qubit-true")
-
--- Keeping the cursor centered. (opting for bindings instead for reasons)
--- vim.opt.scrolloff = 999
-
