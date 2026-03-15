@@ -1,12 +1,22 @@
 return {
-    "ruifm/gitlinker.nvim",
-    dependencies = { "nvim-lua/plenary.nvim" },
+    'ruifm/gitlinker.nvim',
+    dependencies = { 'nvim-lua/plenary.nvim' },
     opts = {
         mappings = nil,
     },
     keys = {
-        { '<leader>gy', mode = { 'n' }, '<cmd>lua require("gitlinker").get_buf_range_url("n")<cr>', desc = 'Copy git url' },
-        { '<leader>gy', mode = { 'v' }, '<cmd>lua require("gitlinker").get_buf_range_url("v")<cr>', desc = 'Copy git url' },
+        {
+            '<leader>gy',
+            mode = { 'n' },
+            '<cmd>lua require("gitlinker").get_buf_range_url("n")<cr>',
+            desc = 'Copy git url'
+        },
+        {
+            '<leader>gy',
+            mode = { 'v' },
+            '<cmd>lua require("gitlinker").get_buf_range_url("v")<cr>',
+            desc = 'Copy git url'
+        },
         {
             '<leader>go',
             mode = { 'n' },
