@@ -18,7 +18,7 @@ return {
 						return { "isort", "black" }
 					end
 				end,
-				scala = { "scalafmt", lsp_format = "fallback" },
+				scala = { "scalafmt", lsp_format = "prefer" },
 				scss = { "prettier" },
 				typescript = { "prettier", name = "dprint", timeout_ms = 500, lsp_format = "fallback" },
 				typescriptreact = { "prettier", name = "dprint", timeout_ms = 500, lsp_format = "fallback" },
@@ -34,6 +34,8 @@ return {
 			formatters = {
 				-- Require a Prettier configuration file to format.
 				prettier = { require_cwd = true },
+				-- Use scala native binary if not via metals.
+				scalafmt = { command = "scala-cli format" },
 			},
 		},
 		init = function()
