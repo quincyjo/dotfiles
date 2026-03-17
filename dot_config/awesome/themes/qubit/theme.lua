@@ -705,6 +705,251 @@ local function color_from_index(i)
 	return i % 2 == 0 and palette.bg_2 or palette.bg
 end
 
+-- {{{ Alttab UI
+do
+	local cairo = require("lgi").cairo
+
+	local LIST_WIDTH = dpi(260)
+	local PREVIEW_WIDTH = dpi(480)
+	local PREVIEW_HEIGHT = dpi(270)
+	local ITEM_HEIGHT = dpi(40)
+	local ICON_SIZE = dpi(24)
+	local MINI_ICON_SIZE = dpi(64)
+	local PADDING = dpi(8)
+
+	local BG_COLOR = palette.bg_2 .. "CC"
+	local SELECTED_BG_COLOR = palette.bg_3
+	local SELECTED_FG_COLOR = palette.blue
+
+	---@type table<AwesomeClient, cairo_t>  Cached ImageSurfaces keyed by client.
+	local preview_cache = {}
+
+	--- Capture a client's current content into the cache and return the image.
+	--- Returns nil if the content is unavailable.
+	---@param c AwesomeClient
+	---@return cairo_t|nil
+	local function capture(c)
+		local ok, surf = pcall(gears.surface, c.content)
+		if not ok or not surf then
+			return nil
+		end
+		local geom = c:geometry()
+		if geom.width <= 0 or geom.height <= 0 then
+			return nil
+		end
+		local img = cairo.ImageSurface.create(cairo.Format.ARGB32, geom.width, geom.height)
+		local cr = cairo.Context.create(img)
+		cr:set_source_surface(surf, 0, 0)
+		cr:paint()
+		preview_cache[c] = img
+		return img
+	end
+
+	---@type AlttabAPI|nil
+	local api = nil
+
+	---@type table<integer, table>  Background containers for each list item.
+	local item_bgs = {}
+	---@type table|nil  Right-panel background container.
+	local preview_bg = nil
+	---@type table|nil
+	local popup = nil
+	---@type AwesomeClient[]|nil
+	local current_clients = nil
+	---@type integer|nil
+	local current_index = nil
+
+	---@param c AwesomeClient
+	---@param index integer
+	---@param selected boolean
+	---@return table
+	local function make_item(c, index, selected)
+		local item = wibox.widget({
+			{
+				{
+					{
+						image = c.icon,
+						resize = true,
+						forced_width = ICON_SIZE,
+						forced_height = ICON_SIZE,
+						widget = wibox.widget.imagebox,
+					},
+					{
+						text = c.name or "?",
+						forced_width = LIST_WIDTH - ICON_SIZE - dpi(24),
+						ellipsize = "end",
+						widget = wibox.widget.textbox,
+					},
+					spacing = dpi(8),
+					layout = wibox.layout.fixed.horizontal,
+				},
+				margins = dpi(8),
+				widget = wibox.container.margin,
+			},
+			bg = selected and SELECTED_BG_COLOR or "#00000000",
+			fg = selected and SELECTED_FG_COLOR or palette.fg,
+			forced_height = ITEM_HEIGHT,
+			widget = wibox.container.background,
+		})
+
+		item:connect_signal("mouse::enter", function()
+			if api then
+				api.select(index)
+			end
+		end)
+		item:connect_signal("button::press", function(_, _, _, button)
+			if not api then
+				return
+			end
+			if button == 1 then
+				api.close_session(true)
+			elseif button == 3 then
+				api.close_session(false)
+			end
+		end)
+
+		return item
+	end
+
+	---@param c AwesomeClient
+	---@return table
+	local function make_preview_inner(c)
+		---@type cairo_t|nil
+		local img = not c:isvisible() and preview_cache[c] or c:isvisible() and capture(c) or nil
+		if not img then
+			return wibox.widget({
+				nil,
+				{
+					nil,
+					{
+						image = c.icon,
+						resize = true,
+						forced_width = MINI_ICON_SIZE,
+						forced_height = MINI_ICON_SIZE,
+						widget = wibox.widget.imagebox,
+					},
+					nil,
+					expand = "none",
+					layout = wibox.layout.align.horizontal,
+				},
+				nil,
+				expand = "none",
+				layout = wibox.layout.align.vertical,
+			})
+		else
+			local iw = img:get_width()
+			local ih = img:get_height()
+			local scale = math.min(PREVIEW_WIDTH / iw, PREVIEW_HEIGHT / ih)
+			return wibox.widget({
+				{
+					image = img,
+					resize = true,
+					forced_width = math.floor(iw * scale),
+					forced_height = math.floor(ih * scale),
+					widget = wibox.widget.imagebox,
+				},
+				halign = "center",
+				valign = "center",
+				forced_width = PREVIEW_WIDTH,
+				forced_height = PREVIEW_HEIGHT,
+				widget = wibox.container.place,
+			})
+		end
+	end
+
+	---@param c AwesomeClient
+	local function set_preview(c)
+		preview_bg.bg = palette.black .. "55"
+		preview_bg.widget = make_preview_inner(c)
+	end
+
+	---@param clients AwesomeClient[]
+	---@param index integer
+	local function build_popup(clients, index)
+		item_bgs = {}
+
+		local list = wibox.widget({ layout = wibox.layout.fixed.vertical })
+		for i, c in ipairs(clients) do
+			local item = make_item(c, i, i == index)
+			item_bgs[i] = item
+			list:add(item)
+		end
+
+		preview_bg = wibox.widget({
+			forced_width = PREVIEW_WIDTH,
+			forced_height = PREVIEW_HEIGHT,
+			widget = wibox.container.background,
+		})
+		set_preview(clients[index])
+
+		popup = awful.popup({
+			widget = {
+				{
+					{
+						list,
+						strategy = "exact",
+						width = LIST_WIDTH,
+						widget = wibox.container.constraint,
+					},
+					preview_bg,
+					spacing = PADDING,
+					layout = wibox.layout.fixed.horizontal,
+				},
+				margins = PADDING,
+				widget = wibox.container.margin,
+			},
+			bg = BG_COLOR,
+			border_width = dpi(2),
+			border_color = palette.bg_3,
+			placement = awful.placement.centered,
+			ontop = true,
+			visible = true,
+		})
+	end
+
+	theme.alttab = {
+		show = function(clients, index)
+			current_clients = clients
+			current_index = index
+			build_popup(clients, index)
+		end,
+		update = function(index)
+			if not current_clients then
+				return
+			end
+			if item_bgs[current_index] then
+				item_bgs[current_index].bg = "00000000"
+				item_bgs[current_index].fg = palette.fg
+			end
+			current_index = index
+			if item_bgs[index] then
+				item_bgs[index].bg = SELECTED_BG_COLOR
+				item_bgs[index].fg = SELECTED_FG_COLOR
+			end
+			set_preview(current_clients[index])
+		end,
+		hide = function()
+			if popup then
+				popup.visible = false
+				popup = nil
+			end
+			item_bgs = {}
+			preview_bg = nil
+			current_clients = nil
+			current_index = nil
+		end,
+		on_init = function(a)
+			api = a
+		end,
+		on_unfocus = capture,
+		on_untagged = capture,
+		on_unmanage = function(c)
+			preview_cache[c] = nil
+		end,
+	}
+end
+-- }}}
+
 function theme.at_screen_connect(s)
 	-- Quake application
 	s.quake = lain.util.quake({ app = awful.util.terminal })

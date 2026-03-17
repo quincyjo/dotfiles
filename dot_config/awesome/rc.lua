@@ -20,6 +20,7 @@ local lain = require("lain")
 -- local menubar                 = require("menubar")
 local freedesktop = require("freedesktop")
 local hotkeys_popup = require("awful.hotkeys_popup")
+local alttab = require("themes.qubit.alttab")
 local mytable = awful.util.table or gears.table -- 4.{0,1} compatibility
 
 -- {{{ Error handling
@@ -180,6 +181,8 @@ awful.util.tasklist_buttons = mytable.join(
 
 beautiful.init(os.getenv("HOME") .. "/.config/awesome/themes/qubit/theme.lua")
 
+-- {{{ Alttab
+alttab.setup({ ui = beautiful.alttab })
 -- }}}
 
 -- {{{ Menu
@@ -359,6 +362,14 @@ root.buttons(mytable.join(
 -- {{{ Key bindings
 
 globalkeys = mytable.join(
+	-- Alttab
+	awful.key({ altkey }, "Tab", function()
+		alttab.switch(1)
+	end, { description = "alt-tab forward", group = "client" }),
+	awful.key({ altkey, "Shift" }, "Tab", function()
+		alttab.switch(-1)
+	end, { description = "alt-tab backward", group = "client" }),
+
 	-- Menubar
 	awful.key({ modkey }, "p", function()
 		menubar.show()
