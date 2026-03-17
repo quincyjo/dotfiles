@@ -363,6 +363,7 @@ local groups = vim.tbl_extend('error', statusline_groups, {
 
     -- Windows.
     WinSeparator = { bg = colors.bg, fg = colors.black },
+    ColorfulWinSep = { bg = colors.bg, fg = colors.lilac },
 
     -- Quickfix window.
     QuickFixLine = { italic = true, bg = colors.transparent_red },
