@@ -9,12 +9,15 @@ local awful = require("awful")
 local naughty = require("naughty")
 ---@diagnostic disable-next-line: undefined-global
 local client = client
+---@diagnostic disable-next-line: undefined-global
+local tag = tag
 
 -- ----------------------------------------------------------------------------
 -- Types
 -- ----------------------------------------------------------------------------
 
 ---@alias AwesomeClient table
+---@alias AwesomeTag    table
 
 ---@class AlttabUI
 ---@field show        fun(clients: AwesomeClient[], index: integer)  Build and display the switcher popup.
@@ -25,6 +28,7 @@ local client = client
 ---@field on_minimized? fun(c: AwesomeClient)  Called when a client becomes minimized.
 ---@field on_untagged?  fun(c: AwesomeClient)  Called when a client is removed from a tag.
 ---@field on_unmanage?  fun(c: AwesomeClient)  Called when a client is removed. Useful for cache cleanup.
+---@field on_tag_selected?  fun(t: AwesomeTag)  Called when a client is removed. Useful for cache cleanup.
 
 ---@class AlttabAPI
 ---@field select      fun(index: integer)      Move the highlight to the given index without committing.
@@ -59,6 +63,7 @@ local alttab = {
 	grabber = nil,
 	held_key = "Mod1",
 	select_key = "Tab",
+	_committing = false,
 }
 
 -- ----------------------------------------------------------------------------
@@ -197,6 +202,10 @@ local function close_session(commit)
 			return
 		end
 
+		-- Suppress focus-signal stack updates while we switch tags/focus.
+		-- view_only() may auto-focus another client on the target tag, which
+		-- would corrupt the stack order. We push `c` manually afterward.
+		alttab._committing = true
 		c.minimized = false
 		awful.screen.focus(c.screen)
 		if c.first_tag then
@@ -204,6 +213,8 @@ local function close_session(commit)
 		end
 		client.focus = c
 		c:raise()
+		alttab._committing = false
+		stack_push(c)
 	end
 end
 
@@ -239,7 +250,9 @@ function alttab.setup(opts)
 	end)
 
 	client.connect_signal("focus", function(c)
-		stack_push(c)
+		if not alttab._committing then
+			stack_push(c)
+		end
 	end)
 
 	if ui.on_unfocus then
@@ -259,6 +272,10 @@ function alttab.setup(opts)
 		client.connect_signal("untagged", function(c, _tag)
 			ui.on_untagged(c)
 		end)
+	end
+
+	if ui.on_tag_selected then
+		tag.connect_signal("property::selected", ui.on_tag_selected)
 	end
 
 	if ui.on_init then

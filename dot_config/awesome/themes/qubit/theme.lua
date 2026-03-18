@@ -729,6 +729,9 @@ do
 	---@param c AwesomeClient
 	---@return cairo_t|nil
 	local function capture(c)
+		if c.minimized or c.hidden then
+			return nil
+		end
 		local ok, surf = pcall(gears.surface, c.content)
 		if not ok or not surf then
 			return nil
@@ -907,6 +910,7 @@ do
 		})
 	end
 
+	---@type AlttabUI
 	theme.alttab = {
 		show = function(clients, index)
 			current_clients = clients
@@ -943,6 +947,13 @@ do
 		end,
 		on_unfocus = capture,
 		on_untagged = capture,
+		on_tag_selected = function(t)
+			if not t.selected then
+				for _, c in pairs(t:clients()) do
+					capture(c)
+				end
+			end
+		end,
 		on_unmanage = function(c)
 			preview_cache[c] = nil
 		end,
