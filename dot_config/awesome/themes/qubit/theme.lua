@@ -1,6 +1,7 @@
 local gears = require("gears")
 local shape = gears.shape
 local lain = require("lain")
+local audio = require("themes.qubit.audio")
 local awful = require("awful")
 local wibox = require("wibox")
 local dpi = require("beautiful.xresources").apply_dpi
@@ -24,6 +25,9 @@ local palette = {
 	purple = "#bea5db",
 	orange = "#ea9785",
 }
+
+---@alias AwesomeWidget table
+---@alias CairoContext table
 
 ---@alias HexColor string
 
@@ -242,22 +246,29 @@ theme.mail = lain.widget.imap({
 --]]
 
 -- Volume popup
-local volume_icon = wibox.widget.textbox()
-local volume_level = wibox.widget.textbox()
+local VOLUME_ICON_W = dpi(10)
+local VOLUME_LEVEL_W = dpi(32)
+local VOLUME_BAR_W = dpi(160)
+local VOLUME_SPACING = dpi(4)
+local VOLUME_MARGIN = dpi(12)
 local volume_popup = nil
-local current_volume = 0
-local current_muted = false
+local volume_popup_mode = nil
 local updating_slider = false
-local volume_initialized = false
 local volume_widget_geo = nil
+
+local function hide_volume_popup()
+	if volume_popup then
+		volume_popup.visible = false
+		volume_popup = nil
+		volume_popup_mode = nil
+	end
+end
 
 local volume_hide_timer = gears.timer({
 	timeout = 2,
 	single_shot = true,
 	callback = function()
-		if volume_popup then
-			volume_popup.visible = false
-		end
+		hide_volume_popup()
 	end,
 })
 
@@ -266,168 +277,180 @@ local bubble_shape = function(cr, width, height)
 	gears.shape.infobubble(cr, width, height, dpi(6), arrow_size, width / 2 - arrow_size)
 end
 
+--- Builds a volume slider linked to the given channel. Also manages updating
+--- the icon and label in response to changes.
+---@param ch AudioHandle
+---@param icon AwesomeWidget
+---@param label AwesomeWidget
+---@param color string
+---@param glyph? fun(level: AudioLevel, muted: AudioMuted): string
+---@return AwesomeWidget
+local function build_channel_slider(ch, icon, label, color, glyph)
+	local progress = wibox.widget({
+		max_value = 100,
+		value = ch.level,
+		forced_height = dpi(4),
+		forced_width = VOLUME_BAR_W,
+		bar_shape = gears.shape.rounded_rect,
+		color = ch.muted and palette.fg_2 or color,
+		background_color = palette.bg_3,
+		widget = wibox.widget.progressbar,
+	})
+	local slider = wibox.widget({
+		minimum = 0,
+		maximum = 100,
+		value = ch.level,
+		forced_height = dpi(16),
+		forced_width = VOLUME_BAR_W,
+		bar_shape = gears.shape.rounded_rect,
+		bar_height = dpi(4),
+		bar_color = "#00000000",
+		handle_shape = gears.shape.circle,
+		handle_color = ch.muted and palette.fg_2 or color,
+		handle_width = dpi(12),
+		widget = wibox.widget.slider,
+	})
+	slider:connect_signal("property::value", function()
+		if updating_slider then
+			return
+		end
+		progress.value = slider.value
+		ch:set_perc(slider.value)
+	end)
+
+	-- Wrap the shared icon in a fresh container for the row.
+	-- The mute-toggle button goes on the container, NOT on the shared icon widget,
+	-- so the wibar segment's popup-open handler is left intact.
+	local icon_container = wibox.container.background(icon)
+	icon_container:buttons(awful.button({}, 1, function()
+		ch:toggle_mute()
+	end))
+
+	ch:subscribe(function(level, muted)
+		if glyph then
+			icon:set_markup(markup.font(theme.font, glyph(level, muted)))
+		end
+		label:set_markup(markup.font(theme.font, string.format("%d%%", level)))
+		updating_slider = true
+		slider.value = level
+		progress.value = level
+		updating_slider = false
+		progress.color = muted and palette.fg_2 or color
+		slider.handle_color = muted and palette.fg_2 or color
+	end)
+
+	return wibox.widget({
+		icon_container,
+		{
+			{
+				progress,
+				left = dpi(6),
+				right = dpi(6),
+				top = dpi(6),
+				bottom = dpi(6),
+				widget = wibox.container.margin,
+			},
+			slider,
+			layout = wibox.layout.stack,
+		},
+		label,
+		layout = wibox.layout.fixed.horizontal,
+		spacing = VOLUME_SPACING,
+	})
+end
+
+local volume_icon = wibox.widget({ forced_width = VOLUME_ICON_W, widget = wibox.widget.textbox })
+local volume_level = wibox.widget({ forced_width = VOLUME_LEVEL_W, widget = wibox.widget.textbox })
+theme.volume = audio.channel("Master")
+local function volume_icon_glyph(level, muted)
+	return muted and "󰖁" or (level < 30 and "󰕿" or level < 70 and "󰖀" or "󰕾")
+end
+
+local volume_slider = build_channel_slider(theme.volume, volume_icon, volume_level, palette.blue, volume_icon_glyph)
+
+local volume_mic_icon = wibox.widget({ forced_width = VOLUME_ICON_W, widget = wibox.widget.textbox })
+local volume_mic_level = wibox.widget({ forced_width = VOLUME_LEVEL_W, widget = wibox.widget.textbox })
+theme.capture = audio.channel("Capture")
+local function capture_icon_glyph(_, muted)
+	return muted and "󰍭" or "󰍬"
+end
+
+local capture_slider =
+	build_channel_slider(theme.capture, volume_mic_icon, volume_mic_level, palette.purple, capture_icon_glyph)
+
+---@param mode "button"|"change"
 local function show_volume_popup(mode)
-	if not volume_popup then
-		local progress = wibox.widget({
-			max_value = 100,
-			value = 0,
-			forced_height = dpi(4),
-			forced_width = dpi(160),
-			bar_shape = gears.shape.rounded_rect,
-			color = palette.blue,
-			background_color = palette.bg_3,
-			widget = wibox.widget.progressbar,
-		})
-		local slider = wibox.widget({
-			minimum = 0,
-			maximum = 100,
-			value = 0,
-			forced_height = dpi(16),
-			forced_width = dpi(160),
-			bar_shape = gears.shape.rounded_rect,
-			bar_height = dpi(4),
-			bar_color = "#00000000",
-			handle_shape = gears.shape.circle,
-			handle_color = palette.blue,
-			handle_width = dpi(12),
-			widget = wibox.widget.slider,
-		})
-		slider:connect_signal("property::value", function()
-			if updating_slider then
-				return
-			end
-			progress.value = slider.value
-			os.execute(string.format("amixer -q set %s %d%%", theme.volume.channel, math.floor(slider.value)))
-			theme.volume.update()
-		end)
-		local content_margin = wibox.container.margin(
-			wibox.widget({
-				volume_icon,
-				{
-					{
-						progress,
-						-- Center bar vertically (16-4)/2=6, inset by half handle width 12/2=6
-						left = dpi(6),
-						right = dpi(6),
-						top = dpi(6),
-						bottom = dpi(6),
-						widget = wibox.container.margin,
-					},
-					slider,
-					layout = wibox.layout.stack,
-				},
-				volume_level,
-				layout = wibox.layout.fixed.horizontal,
-				spacing = dpi(4),
-			}),
-			dpi(12),
-			dpi(12),
-			arrow_size + dpi(10),
-			dpi(10)
-		)
-		volume_popup = awful.popup({
-			widget = content_margin,
-			bg = palette.bg,
-			shape = bubble_shape,
-			border_width = dpi(1),
-			border_color = palette.bg_2,
-			visible = false,
-			ontop = true,
-		})
-		volume_popup._slider = slider
-		volume_popup._progress = progress
-		volume_popup._margin = content_margin
-		volume_popup:connect_signal("mouse::enter", function()
-			volume_hide_timer:stop()
-		end)
-		volume_popup:connect_signal("mouse::leave", function()
-			volume_hide_timer:again()
-		end)
+	volume_popup_mode = mode
+	if volume_popup then
+		return
 	end
 
 	local s = awful.screen.focused()
 
-	updating_slider = true
-	volume_popup._slider.value = current_volume
-	volume_popup._progress.value = current_volume
-	updating_slider = false
+	local rows = mode == "button"
+			and wibox.widget({
+				volume_slider,
+				capture_slider,
+				layout = wibox.layout.fixed.vertical,
+				spacing = VOLUME_SPACING,
+			})
+		or volume_slider
+	local content = wibox.container.margin(
+		rows,
+		VOLUME_MARGIN,
+		VOLUME_MARGIN,
+		mode == "button" and arrow_size + dpi(10) or dpi(10),
+		dpi(10)
+	)
 
-	if mode == "button" and volume_widget_geo then
-		volume_popup.shape = bubble_shape
-		volume_popup._margin.top = arrow_size + dpi(10)
-		-- Read actual width after show; renders after this Lua call returns so no flicker.
-		local popup_w = volume_popup:geometry().width
-		local px = volume_widget_geo.x + math.floor((volume_widget_geo.width - popup_w) / 2)
-		volume_popup.x = math.max(s.geometry.x, math.min(px, s.geometry.x + s.geometry.width - popup_w))
-		volume_popup.y = volume_widget_geo.y + volume_widget_geo.height + dpi(4)
-	else
-		volume_popup.shape = gears.shape.rounded_rect
-		volume_popup._margin.top = dpi(10)
-		awful.placement.top(volume_popup, {
-			margins = { top = dpi(24) },
-			parent = s,
-		})
-	end
-
-	volume_popup.visible = true
+	volume_popup = awful.popup({
+		widget = content,
+		bg = palette.bg_2,
+		shape = mode == "button" and bubble_shape or gears.shape.rounded_rect,
+		border_width = dpi(1),
+		border_color = palette.bg_3,
+		ontop = true,
+		placement = function(popup)
+			if mode == "button" and volume_widget_geo then
+				awful.placement.next_to(popup, {
+					preferred_positions = { "bottom" },
+					preferred_anchors = { "middle" },
+					geometry = volume_widget_geo,
+					margins = { top = VOLUME_SPACING },
+				})
+			else
+				awful.placement.top(popup, {
+					margins = { top = dpi(24) },
+					parent = s,
+				})
+			end
+		end,
+		visible = true,
+	})
+	volume_popup:connect_signal("mouse::enter", function()
+		volume_hide_timer:stop()
+	end)
+	volume_popup:connect_signal("mouse::leave", function()
+		volume_hide_timer:again()
+	end)
 	volume_hide_timer:again()
 end
 
-local function toggle_volume_popup()
-	if volume_popup and volume_popup.visible then
-		volume_hide_timer:stop()
-		volume_popup.visible = false
-	else
-		show_volume_popup("button")
+-- Suppress the popup on the very first (startup) poll; open it on subsequent changes.
+local volume_output_initialized = false
+theme.volume:subscribe(function(_, _)
+	if not volume_output_initialized then
+		volume_output_initialized = true
+		return
 	end
-end
-
-volume_icon:connect_signal("mouse::enter", function()
-	volume_widget_geo = mouse.current_widget_geometry
-end)
-volume_icon:buttons(my_table.join(awful.button({}, 1, toggle_volume_popup)))
-
--- ALSA volume
-theme.volume = lain.widget.alsabar({
-	--togglechannel = "IEC958,3",
-	notification_preset = { font = "Terminus 10", fg = theme.fg_normal },
-	settings = function()
-		local level = volume_now.level
-		local muted = volume_now.status == "off"
-		local icon = muted and "󰖁" or (level < 30 and "󰕿" or level < 70 and "󰖀" or "󰕾")
-		local changed = level ~= current_volume or muted ~= current_muted
-		current_volume = level
-		current_muted = muted
-		volume_icon:set_markup(markup.font(theme.font, icon .. " "))
-		volume_level:set_markup(markup.font(theme.font, muted and "✕" or string.format("%d%%", level)))
-		if not volume_initialized then
-			volume_initialized = true
-			return
-		end
-		if not changed then
-			return
-		end
-		if volume_popup and volume_popup.visible then
-			-- Already open: sync slider and refresh timer
-			updating_slider = true
-			volume_popup._slider.value = level
-			volume_popup._progress.value = level
-			updating_slider = false
+	if volume_popup then
+		if volume_hide_timer.started then
 			volume_hide_timer:again()
-		else
-			show_volume_popup("change")
 		end
-		if volume_popup then
-			if muted then
-				volume_popup._slider.handle_color = palette.fg_2
-				volume_popup._progress.color = palette.fg_2
-			else
-				volume_popup._slider.handle_color = palette.blue
-				volume_popup._progress.color = palette.blue
-			end
-		end
-	end,
-})
+	else
+		show_volume_popup("change")
+	end
+end)
 
 -- MPD
 local musicplr = awful.util.terminal .. " -title Music -g 130x34-320+16 -e ncmpcpp"
@@ -451,9 +474,11 @@ mpdicon:buttons(my_table.join(
 ))
 theme.mpd = lain.widget.mpd({
 	settings = function()
+		---@diagnostic disable-next-line: undefined-global
+		local mpd_now, widget = mpd_now, widget
 		if mpd_now.state == "play" then
-			artist = mpd_now.artist
-			title = mpd_now.title
+			local artist = mpd_now.artist
+			local title = mpd_now.title
 			mpdicon:set_image(theme.widget_music_on)
 			widget:set_markup(markup.font(theme.font, markup(palette.orange, artist) .. " " .. title))
 		elseif mpd_now.state == "pause" then
@@ -469,13 +494,18 @@ theme.mpd = lain.widget.mpd({
 -- MEM
 local mem = lain.widget.mem({
 	settings = function()
-		widget:set_markup(markup.font(theme.font, " " .. mem_now.used .. "MB"))
+		---@diagnostic disable-next-line: undefined-global
+		local mem_now = mem_now
+		local usage = mem_now.used > 1024 and string.format("%.1fGB", mem_now.used / 1024) or mem_now.used .. "MB"
+		widget:set_markup(markup.font(theme.font, " " .. usage))
 	end,
 })
 
 -- CPU
 local cpu = lain.widget.cpu({
 	settings = function()
+		---@diagnostic disable-next-line: undefined-global
+		local cpu_now = cpu_now
 		widget:set_markup(markup.font(theme.font, " " .. cpu_now.usage .. "%"))
 	end,
 })
@@ -493,6 +523,8 @@ end)
 -- Coretemp (lain, average)
 local temp = lain.widget.temp({
 	settings = function()
+		---@diagnostic disable-next-line: undefined-global
+		local coretemp_now = coretemp_now
 		widget:set_markup(markup.font(theme.font, " " .. coretemp_now .. "°C"))
 	end,
 })
@@ -537,6 +569,8 @@ end
 -- Battery
 local bat = lain.widget.bat({
 	settings = function()
+		---@diagnostic disable-next-line: undefined-global
+		local bat_now = bat_now
 		if bat_now.status and bat_now.status ~= "N/A" then
 			if bat_now.ac_status == 1 then
 				widget:set_markup(markup.font(theme.font, " AC"))
@@ -553,6 +587,8 @@ local bat = lain.widget.bat({
 local neticon = wibox.widget.imagebox(theme.widget_net)
 local net = lain.widget.net({
 	settings = function()
+		---@diagnostic disable-next-line: undefined-global
+		local net_now = net_now
 		widget:set_markup(markup.fontfg(theme.font, palette.white, net_now.received .. " ↓↑ " .. net_now.sent))
 	end,
 })
@@ -604,7 +640,7 @@ function theme.gutter_end(cr, width, height, depth)
 end
 
 --- Parallelogram that uses the same angle logic as the powerline.
----@param cr cairo_t
+---@param cr CairoContext
 ---@param width number
 ---@param height number
 function theme.slab(cr, width, height)
@@ -612,15 +648,16 @@ function theme.slab(cr, width, height)
 end
 
 ---@class Segment
----@field widget any
+---@field widget AwesomeWidget
 ---@field background? HexColor
 ---@field color? HexColor
 ---@field margin? integer
+---@field callback? fun(widget: AwesomeWidget)
 
 --- Expands a segment into a list of widgets and its powerline seperator.
 ---@param segment Segment
 ---@param bg_color HexColor
----@return any[]
+---@return AwesomeWidget[]
 local function expand_segment(segment, bg_color, margin)
 	local widget = segment.widget or segment
 	local container = wibox.container.background(
@@ -632,6 +669,9 @@ local function expand_segment(segment, bg_color, margin)
 	)
 	if segment.color then
 		container.fg = segment.color
+	end
+	if segment.callback then
+		segment.callback(container)
 	end
 	return {
 		wibox.widget({
@@ -686,13 +726,26 @@ local segments = {
 	{
 		widget = volume_icon,
 		color = palette.yellow,
+		callback = function(w)
+			w:buttons(awful.button({}, 1, function()
+				volume_widget_geo = mouse.current_widget_geometry
+				if volume_popup and volume_popup_mode == "change" then
+					hide_volume_popup()
+				end
+				if volume_popup then
+					hide_volume_popup()
+				else
+					show_volume_popup("button")
+				end
+			end))
+		end,
 	},
 	{
 		widget = wibox.widget({ bat.widget, layout = wibox.layout.align.horizontal }),
 		color = palette.cyan,
 	},
 	{
-		widget = wibox.widget({ nil, neticon, net.widget, layout = wibox.layout.align.horizontal }),
+		widget = wibox.widget({ neticon, net.widget, layout = wibox.layout.align.horizontal }),
 		background = palette.fg_2,
 	},
 	{
@@ -721,17 +774,18 @@ do
 	local SELECTED_BG_COLOR = palette.bg_3
 	local SELECTED_FG_COLOR = palette.blue
 
-	---@type table<AwesomeClient, cairo_t>  Cached ImageSurfaces keyed by client.
+	---@type table<AwesomeClient, CairoContext>  Cached ImageSurfaces keyed by client.
 	local preview_cache = {}
 
 	--- Capture a client's current content into the cache and return the image.
 	--- Returns nil if the content is unavailable.
 	---@param c AwesomeClient
-	---@return cairo_t|nil
+	---@return CairoContext|nil
 	local function capture(c)
 		if c.minimized or c.hidden then
 			return nil
 		end
+		---@diagnostic disable-next-line: param-type-mismatch
 		local ok, surf = pcall(gears.surface, c.content)
 		if not ok or not surf then
 			return nil
@@ -751,9 +805,9 @@ do
 	---@type AlttabAPI|nil
 	local api = nil
 
-	---@type table<integer, table>  Background containers for each list item.
+	---@type table<integer, AwesomeWidget>  Background containers for each list item.
 	local item_bgs = {}
-	---@type table|nil  Right-panel background container.
+	---@type AwesomeWidget|nil  Right-panel background container.
 	local preview_bg = nil
 	---@type table|nil
 	local popup = nil
@@ -765,7 +819,7 @@ do
 	---@param c AwesomeClient
 	---@param index integer
 	---@param selected boolean
-	---@return table
+	---@return AwesomeWidget
 	local function make_item(c, index, selected)
 		local item = wibox.widget({
 			{
@@ -815,9 +869,9 @@ do
 	end
 
 	---@param c AwesomeClient
-	---@return table
+	---@return AwesomeWidget
 	local function make_preview_inner(c)
-		---@type cairo_t|nil
+		---@type CairoContext|nil
 		local img = not c:isvisible() and preview_cache[c] or c:isvisible() and capture(c) or nil
 		if not img then
 			return wibox.widget({
@@ -972,7 +1026,7 @@ function theme.at_screen_connect(s)
 	end
 	gears.wallpaper.maximized(wallpaper, s, true)
 
-	---@type table
+	---@type AwesomeWidget
 	local powerline = {
 		layout = wibox.layout.fixed.horizontal,
 		spacing = -9,
@@ -1135,7 +1189,7 @@ function theme.at_screen_connect(s)
 	})
 
 	local menu_button = wibox.container.margin(wibox.widget.imagebox(theme.awesome_icon), dpi(2), dpi(2))
-	menu_button:buttons(gears.table.join(
+	menu_button:buttons(my_table.join(
 		awful.widget.button():buttons(),
 		awful.button({}, 1, nil, function()
 			awful.util.mymainmenu:toggle()

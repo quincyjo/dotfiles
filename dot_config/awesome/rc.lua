@@ -297,6 +297,9 @@ end
 
 -- Set picom shadow and border based on floating state.
 screen.connect_signal("arrange", function(s)
+	if not s.selected_tag then
+		return
+	end
 	local layout = s.selected_tag.layout.name
 	local num_tiled_clients = 0
 	-- s.mywibox.border_width = #s.clients > 0 and 1 or 0
@@ -572,16 +575,25 @@ globalkeys = mytable.join(
 
 	-- ALSA volume control
 	awful.key({}, "XF86AudioRaiseVolume", function()
-		os.execute(string.format("amixer -q set %s 5%%+ on", beautiful.volume.channel))
-		beautiful.volume.update()
+		if beautiful.volume then
+			beautiful.volume:adjust_perc(5)
+		else
+			os.execute("amixer -q set Master 5%+ on")
+		end
 	end, { description = "volume up", group = "hotkeys" }),
 	awful.key({}, "XF86AudioLowerVolume", function()
-		os.execute(string.format("amixer -q set %s 5%%- on", beautiful.volume.channel))
-		beautiful.volume.update()
+		if beautiful.volume then
+			beautiful.volume:adjust_perc(-5)
+		else
+			os.execute("amixer -q set Master 5%- on")
+		end
 	end, { description = "volume down", group = "hotkeys" }),
 	awful.key({}, "XF86AudioMute", function()
-		os.execute(string.format("amixer -q set %s toggle", beautiful.volume.togglechannel or beautiful.volume.channel))
-		beautiful.volume.update()
+		if beautiful.volume then
+			beautiful.volume:toggle_mute()
+		else
+			os.execute("amixer -q set Master toggle")
+		end
 	end, { description = "toggle mute", group = "hotkeys" }),
 
 	-- MPD control
