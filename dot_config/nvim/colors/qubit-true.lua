@@ -449,6 +449,7 @@ local groups = vim.tbl_extend("error", statusline_groups, {
 
 	-- Satellite.
 	SatelliteBackground = { bg = colors.bg_2 },
+	SatelliteBar = { bg = colors.white },
 
 	-- Neotree.
 	NeoTreeTabActive = { bg = colors.bg_2, fg = colors.purple },

@@ -1,65 +1,76 @@
-local close_with_q_group = vim.api.nvim_create_augroup('quincyjo/close_with_q', { clear = true })
-vim.api.nvim_create_autocmd('FileType', {
-    group = close_with_q_group,
-    desc = 'Close with <q>',
-    pattern = {
-        'git',
-        'help',
-        'man',
-        'gitsigns-blame',
-    },
-    callback = function(args)
-        if args.match ~= 'help' or not vim.bo[args.buf].modifiable then
-            vim.keymap.set('n', 'q', '<cmd>quit<cr>', { buffer = args.buf })
-        end
-    end,
+local close_with_q_group = vim.api.nvim_create_augroup("quincyjo/close_with_q", { clear = true })
+vim.api.nvim_create_autocmd("FileType", {
+	group = close_with_q_group,
+	desc = "Close with <q>",
+	pattern = {
+		"git",
+		"help",
+		"man",
+		"gitsigns-blame",
+	},
+	callback = function(args)
+		if args.match ~= "help" or not vim.bo[args.buf].modifiable then
+			vim.keymap.set("n", "q", "<cmd>quit<cr>", { buffer = args.buf })
+		end
+	end,
 })
-vim.api.nvim_create_autocmd('FileType', {
-    group = close_with_q_group,
-    pattern = {
-        'DiffviewFiles',
-        'DiffviewFileHistory',
-    },
-    callback = function()
-        vim.keymap.set('n', 'q', '<cmd>DiffviewClose<cr>', { desc = 'Close Diffview', buffer = true })
-    end,
+vim.api.nvim_create_autocmd("FileType", {
+	group = close_with_q_group,
+	pattern = {
+		"DiffviewFiles",
+		"DiffviewFileHistory",
+	},
+	callback = function()
+		vim.keymap.set("n", "q", "<cmd>DiffviewClose<cr>", { desc = "Close Diffview", buffer = true })
+	end,
 })
 
-local line_numbers_group = vim.api.nvim_create_augroup('quincyjo/toggle_relative_line_numbers', {})
-vim.api.nvim_create_autocmd({ 'BufEnter', 'FocusGained', 'InsertLeave', 'CmdlineLeave', 'WinEnter' }, {
-    group = line_numbers_group,
-    desc = 'Toggle relative line numbers on',
-    callback = function()
-        if vim.wo.nu and not vim.startswith(vim.api.nvim_get_mode().mode, 'i') then
-            vim.wo.relativenumber = true
-        end
-
-        -- We need to redraw treesitter-context to update its line numbers.
-        if package.loaded['treesitter-context'] then
-            require('treesitter-context').toggle()
-            require('treesitter-context').toggle()
-        end
-    end,
+local md_group = vim.api.nvim_create_augroup("quincyjo/wrap_md", { clear = true })
+vim.api.nvim_create_autocmd("BufWinEnter", {
+	group = md_group,
+	pattern = "*",
+	callback = function(args)
+		local is_md = vim.bo[args.buf].filetype == "markdown"
+		vim.wo.linebreak = is_md
+		vim.wo.wrap = is_md
+	end,
 })
-vim.api.nvim_create_autocmd({ 'BufLeave', 'FocusLost', 'InsertEnter', 'CmdlineEnter', 'WinLeave' }, {
-    group = line_numbers_group,
-    desc = 'Toggle relative line numbers off',
-    callback = function(args)
-        if vim.wo.nu then
-            vim.wo.relativenumber = false
-        end
 
-        -- We need to redraw treesitter-context to update its line numbers.
-        if package.loaded['treesitter-context'] then
-            require('treesitter-context').toggle()
-            require('treesitter-context').toggle()
-        end
+local line_numbers_group = vim.api.nvim_create_augroup("quincyjo/toggle_relative_line_numbers", {})
+vim.api.nvim_create_autocmd({ "BufEnter", "FocusGained", "InsertLeave", "CmdlineLeave", "WinEnter" }, {
+	group = line_numbers_group,
+	desc = "Toggle relative line numbers on",
+	callback = function()
+		if vim.wo.nu and not vim.startswith(vim.api.nvim_get_mode().mode, "i") then
+			vim.wo.relativenumber = true
+		end
 
-        -- Redraw here to avoid having to first write something for the line numbers to update.
-        if args.event == 'CmdlineEnter' then
-            if not vim.tbl_contains({ '@', '-' }, vim.v.event.cmdtype) then
-                vim.cmd.redraw()
-            end
-        end
-    end,
+		-- We need to redraw treesitter-context to update its line numbers.
+		if package.loaded["treesitter-context"] then
+			require("treesitter-context").toggle()
+			require("treesitter-context").toggle()
+		end
+	end,
+})
+vim.api.nvim_create_autocmd({ "BufLeave", "FocusLost", "InsertEnter", "CmdlineEnter", "WinLeave" }, {
+	group = line_numbers_group,
+	desc = "Toggle relative line numbers off",
+	callback = function(args)
+		if vim.wo.nu then
+			vim.wo.relativenumber = false
+		end
+
+		-- We need to redraw treesitter-context to update its line numbers.
+		if package.loaded["treesitter-context"] then
+			require("treesitter-context").toggle()
+			require("treesitter-context").toggle()
+		end
+
+		-- Redraw here to avoid having to first write something for the line numbers to update.
+		if args.event == "CmdlineEnter" then
+			if not vim.tbl_contains({ "@", "-" }, vim.v.event.cmdtype) then
+				vim.cmd.redraw()
+			end
+		end
+	end,
 })
