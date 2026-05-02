@@ -1,96 +1,36 @@
+require("themes.qubit.types")
+
+-- Awesome
 local gears = require("gears")
 local shape = gears.shape
-local lain = require("lain")
-local audio = require("themes.qubit.audio")
 local awful = require("awful")
 local wibox = require("wibox")
+local naughty = require("naughty")
 local dpi = require("beautiful.xresources").apply_dpi
 
-local my_table = awful.util.table or gears.table -- 4.{0,1} compatibility
+-- Third Party
+local lain = require("lain")
 
-local palette = {
-	black = "#0a0909",
-	white = "#e4e2e1",
-	bg = "#1c1b1a",
-	bg_2 = "#252121",
-	bg_3 = "#464442",
-	fg = "#d7d4d2",
-	fg_2 = "#656260",
-	pink = "#e495b7",
-	red = "#f04c8b",
-	green = "#7eba7d",
-	yellow = "#c4ad61",
-	blue = "#79b8cc",
-	cyan = "#71bcb5",
-	purple = "#bea5db",
-	orange = "#ea9785",
-}
+-- Backend Modules
+local audio = require("continuity.audio")
+local media = require("continuity.media")
+local bat = require("continuity.sysinfo.bat")
+local temp = require("continuity.sysinfo.temp")
+local cpu = require("continuity.sysinfo.cpu")
+local mem = require("continuity.sysinfo.mem")
+local net = require("continuity.sysinfo.net")
+local backlight = require("continuity.backlight")
+local app_icon = require("continuity.util.app_icon")
 
----@alias AwesomeWidget table
----@alias CairoContext table
-
----@alias HexColor string
-
----@alias RGB {
----    r: number,
----    g: number,
----    b: number,
----}
-
----@param hex HexColor
----@return RGB
-local function hex_to_rgb(hex)
-	if hex == nil then
-		return { r = 0, g = 0, b = 0 }
-	end
-	return {
-		r = tonumber(hex:sub(2, 3), 16),
-		g = tonumber(hex:sub(4, 5), 16),
-		b = tonumber(hex:sub(6, 7), 16),
-	}
-end
-
---- Convert an RGB color to a hex color string.
----@param rgb RGB
----@return HexColor
-local function rgb_to_hex(rgb)
-	-- Note that if awesome is not built against luajit, then this will error
-	-- out. It can be fixed by adding a floor or ceil to the values before
-	-- formatting the string.
-	return string.format("#%02x%02x%02x", rgb.r, rgb.g, rgb.b)
-end
-
---- Lighten a color. If amt is 1 or less, then it will be treated as a
---- percentage. Otherwise, it will be treated as an absolute amount and added to
---- each channel weighted to perserve hue.
----@param hex HexColor
----@param amt number
----@return HexColor
-local function lighten(hex, amt)
-	local rgb = hex_to_rgb(hex)
-	if amt <= 1 then
-		-- percentage
-		local ratio = 1 + amt
-		rgb.r = rgb.r * ratio
-		rgb.g = rgb.g * ratio
-		rgb.b = rgb.b * ratio
-	else
-		-- ratiod absolute
-		local max = math.max(rgb.r, rgb.g, rgb.b)
-		rgb.r = rgb.r + amt * (rgb.r / max)
-		rgb.g = rgb.g + amt * (rgb.g / max)
-		rgb.b = rgb.b + amt * (rgb.b / max)
-	end
-	rgb.r = (rgb.r < 0) and 0 or (rgb.r > 255) and 255 or rgb.r
-	rgb.g = (rgb.g < 0) and 0 or (rgb.g > 255) and 255 or rgb.g
-	rgb.b = (rgb.b < 0) and 0 or (rgb.b > 255) and 255 or rgb.b
-	return rgb_to_hex(rgb)
-end
+-- Theme
+local palette = require("themes.qubit.palette")
+local colors = require("themes.qubit.colors")
+local media_widget = require("themes.qubit.media_widget")
 
 --- Creates a vertical bevel gradient for the wibox.
 ---@param color HexColor The color of the gradient.
 ---@param height number The height of the gradient in pixels.
----@param opacity? number An optional opacity between 0 and 1.
+---@param opacity? Alpha An optional opacity between 0 and 1.
 local function gradient(color, height, opacity)
 	local alpha = opacity and string.format("%02x", opacity * 255) or ""
 	return {
@@ -98,12 +38,58 @@ local function gradient(color, height, opacity)
 		from = { 0, 0 },
 		to = { 0, dpi(height) },
 		stops = {
-			{ 0, lighten(color, 0.3) .. alpha },
+			{ 0, colors.lighten(color, 0.3) .. alpha },
 			{ 0.1, color .. alpha },
 			{ 0.9, color .. alpha },
-			{ 1, lighten(color, -0.3) .. alpha },
+			{ 1, colors.lighten(color, -0.3) .. alpha },
 		},
 	}
+end
+
+---@param mb number
+---@return string
+local function format_megabytes(mb)
+	if mb > 1024 then
+		return string.format("%.1fGB", mb / 1024)
+	else
+		return string.format("%.1fMB", mb)
+	end
+end
+
+---@param b number
+---@return string
+local function format_bytes(b)
+	if b > 1024 then
+		return format_megabytes(b / 1024)
+	else
+		return string.format("%.1f", b)
+	end
+end
+
+--- Attach a notification for mouse interactions with the given widget.
+---@param widget AwesomeWidget                       The widget to attach to.
+---@param callback? fun(widget: NaughtyNotification) Callback with the notification.
+---@param initial_args? table                        Initial arguments for the notification.
+local function attach_notification_to(widget, callback, initial_args)
+	local notification = nil
+	widget:connect_signal("mouse::enter", function()
+		if notification then
+			return
+		end
+		local args = initial_args or {}
+		args.timeout = args.timeout or 0
+		args.screen = args.screen or mouse.screen
+		notification = naughty.notification(args)
+		if callback then
+			callback(notification)
+		end
+	end)
+	widget:connect_signal("mouse::leave", function()
+		if notification then
+			notification:destroy()
+			notification = nil
+		end
+	end)
 end
 
 local dir = os.getenv("HOME") .. "/.config/awesome/themes/qubit"
@@ -119,7 +105,9 @@ local theme = {
 	bg_urgent = palette.bg_3,
 	taglist_fg_focus = palette.blue,
 	taglist_bg_focus = palette.black,
-	-- taglist_shape_border_color_focus          = palette.red,
+	taglist_bg_occupied = gradient(palette.red, dpi(14)),
+	taglist_bg_empty = gradient(palette.red, dpi(14)),
+	taglist_bg_urgent = palette.bg_3,
 	tasklist_fg_normal = palette.fg_2,
 	tasklist_bg_normal = palette.bg,
 	tasklist_fg_focus = palette.blue,
@@ -134,9 +122,25 @@ local theme = {
 	titlebar_bg_normal = palette.bg_2,
 	titlebar_fg_focus = palette.yellow,
 	titlebar_fg_normal = palette.purple,
+	useless_gap = 2,
+	gap_single_client = false,
+	bg_systray = palette.bg_3,
 	menu_height = dpi(18),
 	wibox_height = dpi(18),
 	menu_width = dpi(160),
+	notification_bg = palette.bg_2 .. "33",
+	notification_border_color = palette.bg_3,
+	notification_border_width = dpi(1),
+	hotkeys_bg = palette.bg_2 .. "AA",
+	hotkeys_border_color = palette.bg_3,
+	hotkeys_modifiers_fg = palette.fg_2,
+	hotkeys_fg = palette.fg,
+	hotkeys_label_fg = palette.black,
+	hotkeys_font = "Terminus Bold 9",
+	hotkeys_description_font = "Terminus 9",
+	popup_bg = palette.bg_2 .. "AA",
+	popup_border_color = palette.bg_3,
+	popup_border_width = dpi(2),
 	menu_submenu_icon = dir .. "/icons/submenu.png",
 	awesome_icon = dir .. "/icons/awesome.png",
 	awesome_icon_2 = dir .. "/icons/awesome_w.png",
@@ -178,7 +182,6 @@ local theme = {
 	widget_scissors = dir .. "/icons/scissors.png",
 	tasklist_plain_task_name = true,
 	tasklist_disable_icon = false,
-	useless_gap = 2,
 	titlebar_close_button_focus = dir .. "/icons/titlebar/close_focus.png",
 	titlebar_close_button_normal = dir .. "/icons/titlebar/close_normal.png",
 	titlebar_ontop_button_focus_active = dir .. "/icons/titlebar/ontop_focus_active.png",
@@ -197,22 +200,43 @@ local theme = {
 	titlebar_maximized_button_normal_active = dir .. "/icons/titlebar/maximized_normal_active.png",
 	titlebar_maximized_button_focus_inactive = dir .. "/icons/titlebar/maximized_focus_inactive.png",
 	titlebar_maximized_button_normal_inactive = dir .. "/icons/titlebar/maximized_normal_inactive.png",
+
+	-- Checkhealth.
+	checkhealth_bg = palette.bg_2,
+	checkhealth_logs_font = "Terminus 10",
+	checkhealth_logs_border_color = palette.bg_3,
 }
 
-local markup = lain.util.markup
-
-local binclock = awful.widget.watch("date +'%a %d %b %R'", 60, function(widget, stdout)
-	widget:set_markup(markup.font(theme.font, stdout))
+-- Minute aligned clock.
+local clock = wibox.widget({
+	font = theme.font,
+	widget = wibox.widget.textbox,
+})
+awful.spawn.easy_async("date +'%a %d %b %R'", function(stdout)
+	clock:set_markup(stdout)
+end)
+awful.spawn.easy_async("date +'%S'", function(stdout)
+	gears.timer({
+		timeout = 60 - (tonumber(stdout) or 0),
+		oneshot = true,
+		autostart = true,
+		callback = function()
+			awful.widget.watch("date +'%a %d %b %R'", 60, function(widget, date)
+				widget:set_markup(date)
+			end, clock)
+		end,
+	})
 end)
 
 -- Calendar
 theme.cal = lain.widget.cal({
 	--cal = "cal --color=always",
-	attach_to = { binclock },
+	attach_to = { clock },
 	notification_preset = {
-		font = "Terminus 10",
+		font = theme.font,
 		fg = theme.fg_normal,
-		bg = theme.bg_normal,
+		bg = theme.popup_bg,
+		border_color = theme.popup_border_color,
 	},
 })
 
@@ -222,7 +246,7 @@ lain.widget.contrib.task.attach(task, {
 	-- do not colorize output
 	show_cmd = "task | sed -r 's/\\x1B\\[([0-9]{1,2}(;[0-9]{1,2})?)?[mGK]//g'",
 })
-task:buttons(my_table.join(awful.button({}, 1, lain.widget.contrib.task.prompt)))
+task:buttons(gears.table.join(awful.button({}, 1, lain.widget.contrib.task.prompt)))
 
 -- Mail IMAP check
 --[[ commented because it needs to be set before use
@@ -252,14 +276,50 @@ local VOLUME_BAR_W = dpi(160)
 local VOLUME_SPACING = dpi(4)
 local VOLUME_MARGIN = dpi(12)
 local volume_popup = nil
+local volume_notification = nil
 local volume_popup_mode = nil
 local updating_slider = false
 local volume_widget_geo = nil
 
+---@type table<string, MediaWidgetHandle>
+local media_widget_cache = {}
+
+--- Get the media widget for a source. If one doesn't exist, make one and cache
+--- it. Otherwise, returns the cached widget and starts it.
+---@param source MediaSource
+---@return MediaWidgetHandle
+local function get_media_wiget(source)
+	local handle
+	if media_widget_cache[source.id] then
+		handle = media_widget_cache[source.id]
+		handle.start()
+	else
+		handle = media_widget(source, {
+			width = VOLUME_ICON_W + VOLUME_LEVEL_W + VOLUME_BAR_W,
+			height = dpi(100),
+		})
+		media_widget_cache[source.id] = handle
+		source:on_removed(function(source_id)
+			handle.stop()
+			media_widget_cache[source_id] = nil
+		end)
+	end
+	return handle
+end
+
 local function hide_volume_popup()
+	if volume_notification then
+		volume_notification:destroy()
+	end
 	if volume_popup then
 		volume_popup.visible = false
 		volume_popup = nil
+		if volume_popup_mode == "button" then
+			media.enable_notifications()
+			for _, widget in pairs(media_widget_cache) do
+				widget.stop()
+			end
+		end
 		volume_popup_mode = nil
 	end
 end
@@ -283,39 +343,41 @@ end
 ---@param icon AwesomeWidget
 ---@param label AwesomeWidget
 ---@param color string
----@param glyph? fun(level: AudioLevel, muted: AudioMuted): string
+---@param glyph? fun(state: AudioState): string
 ---@return AwesomeWidget
 local function build_channel_slider(ch, icon, label, color, glyph)
-	local progress = wibox.widget({
-		max_value = 100,
-		value = ch.level,
-		forced_height = dpi(4),
-		forced_width = VOLUME_BAR_W,
-		bar_shape = gears.shape.rounded_rect,
-		color = ch.muted and palette.fg_2 or color,
-		background_color = palette.bg_3,
-		widget = wibox.widget.progressbar,
-	})
 	local slider = wibox.widget({
 		minimum = 0,
 		maximum = 100,
-		value = ch.level,
+		value = ch.state.level,
 		forced_height = dpi(16),
 		forced_width = VOLUME_BAR_W,
 		bar_shape = gears.shape.rounded_rect,
 		bar_height = dpi(4),
-		bar_color = "#00000000",
+		bar_color = palette.bg_3,
+		bar_active_color = ch.state.muted and palette.fg_2 or color,
 		handle_shape = gears.shape.circle,
-		handle_color = ch.muted and palette.fg_2 or color,
-		handle_width = dpi(12),
+		handle_color = ch.state.muted and palette.fg_2 or color,
+		handle_width = dpi(10),
 		widget = wibox.widget.slider,
 	})
+	local set_debounce_timer
 	slider:connect_signal("property::value", function()
 		if updating_slider then
 			return
 		end
-		progress.value = slider.value
-		ch:set_perc(slider.value)
+		-- Short debounce to avoid thrashing updates
+		if not set_debounce_timer then
+			set_debounce_timer = gears.timer({
+				timeout = 0.05,
+				single_shot = true,
+				autostart = true,
+				callback = function()
+					set_debounce_timer = nil
+					ch:set_perc(slider.value)
+				end,
+			})
+		end
 	end)
 
 	-- Wrap the shared icon in a fresh container for the row.
@@ -326,75 +388,312 @@ local function build_channel_slider(ch, icon, label, color, glyph)
 		ch:toggle_mute()
 	end))
 
-	ch:subscribe(function(level, muted)
+	---@param state AudioState
+	local function update(state)
 		if glyph then
-			icon:set_markup(markup.font(theme.font, glyph(level, muted)))
+			icon:set_text(glyph(state))
 		end
-		label:set_markup(markup.font(theme.font, string.format("%d%%", level)))
+		label:set_text(string.format("%3d%%", state.level))
 		updating_slider = true
-		slider.value = level
-		progress.value = level
+		slider.value = state.level
 		updating_slider = false
-		progress.color = muted and palette.fg_2 or color
-		slider.handle_color = muted and palette.fg_2 or color
-	end)
+		slider.bar_active_color = state.muted and palette.fg_2 or color
+		slider.handle_color = state.muted and palette.fg_2 or color
+	end
+
+	ch:subscribe(update)
+	ch:on_ready(update)
 
 	return wibox.widget({
 		icon_container,
-		{
-			{
-				progress,
-				left = dpi(6),
-				right = dpi(6),
-				top = dpi(6),
-				bottom = dpi(6),
-				widget = wibox.container.margin,
-			},
-			slider,
-			layout = wibox.layout.stack,
-		},
+		slider,
 		label,
 		layout = wibox.layout.fixed.horizontal,
 		spacing = VOLUME_SPACING,
 	})
 end
 
-local volume_icon = wibox.widget({ forced_width = VOLUME_ICON_W, widget = wibox.widget.textbox })
-local volume_level = wibox.widget({ forced_width = VOLUME_LEVEL_W, widget = wibox.widget.textbox })
-theme.volume = audio.channel("Master")
-local function volume_icon_glyph(level, muted)
-	return muted and "󰖁" or (level < 30 and "󰕿" or level < 70 and "󰖀" or "󰕾")
+local volume = audio.Volume
+local volume_icon = wibox.widget({ font = theme.font, forced_width = VOLUME_ICON_W, widget = wibox.widget.textbox })
+local volume_level = wibox.widget({ font = theme.font, forced_width = VOLUME_LEVEL_W, widget = wibox.widget.textbox })
+local function volume_icon_glyph(state)
+	if state.port_type == "headset" or state.port_type == "headphones" then
+		return state.connection == "bluetooth" and "󰥰" or state.muted and "󰟎" or "󰋋"
+	end
+	return state.muted and "󰖁" or (state.level < 30 and "󰕿" or state.level < 70 and "󰖀" or "󰕾")
 end
+local volume_slider = build_channel_slider(volume, volume_icon, volume_level, palette.blue, volume_icon_glyph)
 
-local volume_slider = build_channel_slider(theme.volume, volume_icon, volume_level, palette.blue, volume_icon_glyph)
-
-local volume_mic_icon = wibox.widget({ forced_width = VOLUME_ICON_W, widget = wibox.widget.textbox })
-local volume_mic_level = wibox.widget({ forced_width = VOLUME_LEVEL_W, widget = wibox.widget.textbox })
-theme.capture = audio.channel("Capture")
-local function capture_icon_glyph(_, muted)
-	return muted and "󰍭" or "󰍬"
+local capture = audio.Capture
+local volume_mic_icon = wibox.widget({ font = theme.font, forced_width = VOLUME_ICON_W, widget = wibox.widget.textbox })
+local volume_mic_level =
+	wibox.widget({ font = theme.font, forced_width = VOLUME_LEVEL_W, widget = wibox.widget.textbox })
+local function capture_icon_glyph(state)
+	return state.muted and "󰍭" or "󰍬"
 end
-
 local capture_slider =
-	build_channel_slider(theme.capture, volume_mic_icon, volume_mic_level, palette.purple, capture_icon_glyph)
+	build_channel_slider(capture, volume_mic_icon, volume_mic_level, palette.purple, capture_icon_glyph)
+
+do
+	-- NOTE: This this build around steps not percent, so requires either the
+	-- acpilight or sysfs backends.
+	local notification
+	local is_updating = false
+	local slider = wibox.widget({
+		minimum = 0,
+		maximum = (backlight.primary_display.steps or 1) - 1,
+		value = backlight.primary_display.state.raw or 0,
+		forced_height = dpi(16),
+		forced_width = VOLUME_BAR_W,
+		bar_shape = gears.shape.rounded_rect,
+		bar_height = dpi(4),
+		bar_color = palette.bg_3,
+		bar_active_color = palette.yellow,
+		handle_shape = gears.shape.circle,
+		handle_color = palette.yellow,
+		handle_width = dpi(10),
+		widget = wibox.widget.slider,
+	})
+	local percent_widget = wibox.widget({
+		font = theme.font,
+		text = backlight.primary_display.state.brightness,
+		forced_width = VOLUME_LEVEL_W,
+		widget = wibox.widget.textbox,
+	})
+	local widget = wibox.widget({
+		{
+			{
+				{
+					text = "󰃠",
+					font = theme.font,
+					-- Icon is wide so we offset with reducing left margin.
+					forced_width = VOLUME_ICON_W + dpi(3),
+					widget = wibox.widget.textbox,
+				},
+				slider,
+				percent_widget,
+				spacing = VOLUME_SPACING,
+				layout = wibox.layout.fixed.horizontal,
+			},
+			left = VOLUME_MARGIN - dpi(3),
+			right = VOLUME_MARGIN,
+			top = dpi(10),
+			bottom = dpi(10),
+			widget = wibox.container.margin,
+		},
+		bg = palette.bg_2,
+		widget = wibox.container.background,
+	})
+
+	local function update(state)
+		is_updating = true
+		slider.value = state.raw or 0
+		is_updating = false
+	end
+
+	slider:connect_signal("property::value", function()
+		-- NOTE: acpilight has a bug in percent calculation, so we do it
+		-- manually for nicer display.
+		local percent = slider.value == slider.maximum and 100
+			or math.floor(slider.value / (slider.maximum + 1) * 100 + 0.5)
+		percent_widget:set_markup(string.format("%3d%%", percent))
+		if is_updating then
+			return
+		end
+		local set_debounce_timer
+		if not set_debounce_timer then
+			set_debounce_timer = gears.timer({
+				timeout = 0.05,
+				single_shot = true,
+				autostart = true,
+				callback = function()
+					set_debounce_timer = nil
+					backlight.primary_display:set(slider.value)
+				end,
+			})
+		end
+	end)
+	widget:connect_signal("mouse::enter", function()
+		if notification then
+			notification:reset_timeout(0)
+		end
+	end)
+	widget:connect_signal("mouse::leave", function()
+		if notification then
+			notification:reset_timeout(2)
+		end
+	end)
+
+	backlight.primary_display:on_ready(function(state)
+		slider.maximum = (backlight.primary_display.steps or 2) - 1
+		update(state)
+	end)
+	backlight.primary_display:subscribe(update)
+	backlight.primary_display:on_control(function(_)
+		if notification then
+			notification:reset_timeout()
+		else
+			notification = naughty.notification({
+				timeout = 2,
+				resident = true,
+				position = "top_middle",
+				widget_template = widget,
+			})
+			notification:connect_signal("destroyed", function()
+				notification = nil
+			end)
+		end
+	end)
+end
 
 ---@param mode "button"|"change"
 local function show_volume_popup(mode)
 	volume_popup_mode = mode
-	if volume_popup then
+	if mode == "button" and volume_popup then
+		return
+	elseif mode == "change" and volume_notification then
+		volume_notification:reset_timeout()
 		return
 	end
 
 	local s = awful.screen.focused()
 
-	local rows = mode == "button"
-			and wibox.widget({
+	if mode == "change" then
+		local content = wibox.widget({
+			{
 				volume_slider,
-				capture_slider,
-				layout = wibox.layout.fixed.vertical,
-				spacing = VOLUME_SPACING,
-			})
-		or volume_slider
+				top = dpi(10),
+				bottom = dpi(10),
+				left = VOLUME_MARGIN,
+				right = VOLUME_MARGIN,
+				widget = wibox.container.margin,
+			},
+			bg = palette.bg_2,
+			widget = wibox.container.background,
+		})
+		volume_notification = naughty.notification({
+			timeout = 2,
+			resident = true,
+			position = "top_middle",
+			screen = s,
+			widget_template = content,
+		})
+		volume_notification:connect_signal("destroyed", function()
+			volume_notification = nil
+		end)
+		content:connect_signal("mouse::enter", function()
+			if volume_notification then
+				volume_notification:reset_timeout(0)
+			end
+		end)
+		content:connect_signal("mouse::leave", function()
+			if volume_notification then
+				volume_notification:reset_timeout(2)
+			end
+		end)
+		return
+	end
+
+	media.disable_notifications()
+	media.destroy_all_notifications()
+
+	local rows = {
+		volume_slider,
+		capture_slider,
+		layout = wibox.layout.fixed.vertical,
+		spacing = VOLUME_SPACING,
+	}
+	for _, input in ipairs(audio.inputs.all()) do
+		local icon_widget = wibox.widget({
+			resize = true,
+			forced_width = VOLUME_ICON_W,
+			forced_height = VOLUME_ICON_W,
+			widget = wibox.widget.imagebox,
+		})
+		if input.icon_name then
+			app_icon.by_icon_name(input.icon_name, function(icon_path)
+				icon_widget.image = icon_path
+			end)
+		elseif input.app_name then
+			app_icon.by_app_name(input.app_name, function(icon_path)
+				icon_widget.image = icon_path
+			end)
+		end
+		local slider = wibox.widget({
+			minimum = 0,
+			maximum = 100,
+			value = input.state.level,
+			forced_height = dpi(16),
+			forced_width = VOLUME_BAR_W,
+			bar_shape = gears.shape.rounded_rect,
+			bar_height = dpi(4),
+			bar_color = palette.bg_3,
+			bar_active_color = input.state.muted and palette.fg_2 or palette.green,
+			handle_shape = gears.shape.circle,
+			handle_color = input.state.muted and palette.fg_2 or palette.green,
+			handle_width = dpi(10),
+			widget = wibox.widget.slider,
+		})
+		local set_debounce_timer
+		slider:connect_signal("property::value", function()
+			if updating_slider then
+				return
+			end
+			-- Short debounce to avoid thrashing updates
+			if not set_debounce_timer then
+				set_debounce_timer = gears.timer({
+					timeout = 0.05,
+					single_shot = true,
+					autostart = true,
+					callback = function()
+						set_debounce_timer = nil
+						input:set_perc(slider.value)
+					end,
+				})
+			end
+		end)
+
+		local level_widget = wibox.widget({
+			text = string.format("%3d%%", input.state.level),
+			font = theme.font,
+			widget = wibox.widget.textbox,
+		})
+
+		icon_widget:buttons(awful.button({}, 1, function()
+			input:toggle_mute()
+		end))
+
+		---@param state SinkInputState
+		local function update(state)
+			level_widget:set_markup(string.format("%3d%%", state.level))
+			updating_slider = true
+			slider.value = state.level
+			updating_slider = false
+			slider.bar_active_color = state.muted and palette.fg_2 or palette.green
+			slider.handle_color = state.muted and palette.fg_2 or palette.green
+		end
+
+		input:subscribe(update)
+
+		rows[#rows + 1] = {
+			icon_widget,
+			slider,
+			level_widget,
+			spacing = VOLUME_SPACING,
+			layout = wibox.layout.fixed.horizontal,
+		}
+	end
+	for _, source in pairs(media.sources.all()) do
+		if source:active() then
+			local widget_handle = get_media_wiget(source)
+			rows[#rows + 1] = {
+				widget_handle.widget,
+				shape = gears.shape.rounded_rect,
+				widget = wibox.container.background,
+			}
+		end
+	end
+
 	local content = wibox.container.margin(
 		rows,
 		VOLUME_MARGIN,
@@ -408,10 +707,10 @@ local function show_volume_popup(mode)
 		bg = palette.bg_2,
 		shape = mode == "button" and bubble_shape or gears.shape.rounded_rect,
 		border_width = dpi(1),
-		border_color = palette.bg_3,
+		border_color = theme.popup_border_color,
 		ontop = true,
 		placement = function(popup)
-			if mode == "button" and volume_widget_geo then
+			if volume_widget_geo then
 				awful.placement.next_to(popup, {
 					preferred_positions = { "bottom" },
 					preferred_anchors = { "middle" },
@@ -436,13 +735,7 @@ local function show_volume_popup(mode)
 	volume_hide_timer:again()
 end
 
--- Suppress the popup on the very first (startup) poll; open it on subsequent changes.
-local volume_output_initialized = false
-theme.volume:subscribe(function(_, _)
-	if not volume_output_initialized then
-		volume_output_initialized = true
-		return
-	end
+volume:on_control(function(_)
 	if volume_popup then
 		if volume_hide_timer.started then
 			volume_hide_timer:again()
@@ -452,93 +745,84 @@ theme.volume:subscribe(function(_, _)
 	end
 end)
 
--- MPD
-local musicplr = awful.util.terminal .. " -title Music -g 130x34-320+16 -e ncmpcpp"
-local mpdicon = wibox.widget.imagebox(theme.widget_music)
-mpdicon:buttons(my_table.join(
-	awful.button({ modkey }, 1, function()
-		awful.spawn.with_shell(musicplr)
-	end),
-	awful.button({}, 1, function()
-		os.execute("mpc prev")
-		theme.mpd.update()
-	end),
-	awful.button({}, 2, function()
-		os.execute("mpc toggle")
-		theme.mpd.update()
-	end),
-	awful.button({}, 3, function()
-		os.execute("mpc next")
-		theme.mpd.update()
-	end)
-))
-theme.mpd = lain.widget.mpd({
-	settings = function()
-		---@diagnostic disable-next-line: undefined-global
-		local mpd_now, widget = mpd_now, widget
-		if mpd_now.state == "play" then
-			local artist = mpd_now.artist
-			local title = mpd_now.title
-			mpdicon:set_image(theme.widget_music_on)
-			widget:set_markup(markup.font(theme.font, markup(palette.orange, artist) .. " " .. title))
-		elseif mpd_now.state == "pause" then
-			widget:set_markup(markup.font(theme.font, " mpd paused "))
-			mpdicon:set_image(theme.widget_music_pause)
-		else
-			widget:set_text("")
-			mpdicon:set_image(theme.widget_music)
-		end
-	end,
+-- Mem
+local mem_widget = wibox.widget({
+	text = " …",
+	font = theme.font,
+	widget = wibox.widget.textbox,
 })
-
--- MEM
-local mem = lain.widget.mem({
-	settings = function()
-		---@diagnostic disable-next-line: undefined-global
-		local mem_now = mem_now
-		local usage = mem_now.used > 1024 and string.format("%.1fGB", mem_now.used / 1024) or mem_now.used .. "MB"
-		widget:set_markup(markup.font(theme.font, " " .. usage))
-	end,
-})
-
--- CPU
-local cpu = lain.widget.cpu({
-	settings = function()
-		---@diagnostic disable-next-line: undefined-global
-		local cpu_now = cpu_now
-		widget:set_markup(markup.font(theme.font, " " .. cpu_now.usage .. "%"))
-	end,
-})
-
---[[ Coretemp (lm_sensors, per core)
-local tempwidget = awful.widget.watch({awful.util.shell, '-c', 'sensors | grep Core'}, 30,
-function(widget, stdout)
-    local temps = ""
-    for line in stdout:gmatch("[^\r\n]+") do
-        temps = temps .. line:match("+(%d+).*°C")  .. "° " -- in Celsius
-    end
-    widget:set_markup(markup.font(theme.font, " " .. temps))
+mem:subscribe(function(state)
+	mem_widget:set_markup(" " .. format_megabytes(state.used))
+end)
+attach_notification_to(mem_widget, function(notification)
+	notification:connect_signal(
+		"destroyed",
+		mem:subscribe(function(state)
+			notification.title = string.format("Memory (%02.1f%%)", state.perc)
+			notification.message = table.concat({
+				string.format("%s / %s", format_megabytes(state.used), format_megabytes(state.total)),
+				string.format("Free: %s", format_megabytes(state.free)),
+				string.format("Buffers: %s", format_megabytes(state.buffers)),
+				string.format("Cached: %s", format_megabytes(state.cached)),
+				string.format("Swap: %s / %s", format_megabytes(state.swap_used), format_megabytes(state.swap_total)),
+			}, "\n")
+		end)
+	)
 end)
 --]]
--- Coretemp (lain, average)
-local temp = lain.widget.temp({
-	settings = function()
-		---@diagnostic disable-next-line: undefined-global
-		local coretemp_now = coretemp_now
-		widget:set_markup(markup.font(theme.font, " " .. coretemp_now .. "°C"))
-	end,
+
+-- CPU
+local cpu_widget = wibox.widget({
+	text = " …",
+	font = theme.font,
+	widget = wibox.widget.textbox,
 })
+cpu:subscribe(function(state)
+	cpu_widget:set_markup(string.format(" %0.f%%", state.usage))
+end)
+attach_notification_to(cpu_widget, function(notification)
+	notification:connect_signal(
+		"destroyed",
+		cpu:subscribe(function(state)
+			local lines = {}
+			for k, v in pairs(state) do
+				if type(v) == "number" then
+					lines[#lines + 1] = string.format("%s: %2.f%%", k, v)
+				end
+			end
+			for i, core in ipairs(state.cores) do
+				lines[#lines + 1] = string.format("Core %d: %2.f%%", i - 1, core.usage)
+			end
+			notification.message = table.concat(lines, "\n")
+		end)
+	)
+end)
 --]]
 
---[[ / fs
-theme.fs = lain.widget.fs({
-    notification_preset = { fg = theme.fg_normal, bg = theme.bg_normal, font = "Terminus 10" },
-    settings = function()
-        local fsp = string.format(" %3.2f %s", fs_now["/"].free, fs_now["/"].units)
-        widget:set_markup(markup.font(theme.font, fsp))
-    end
+-- Coretemp
+local temp_widget = wibox.widget({
+	text = " …",
+	font = theme.font,
+	widget = wibox.widget.textbox,
 })
-]]
+temp:subscribe(function(state)
+	temp_widget:set_markup(string.format(" %0.f°C", state.avg))
+end)
+attach_notification_to(temp_widget, function(notification)
+	notification:connect_signal(
+		"destroyed",
+		temp:subscribe(function(state)
+			local lines = {}
+			for k, v in pairs(state.zones) do
+				if type(v) == "number" then
+					lines[#lines + 1] = string.format("%s: %0.1f°C", k:match("thermal_zone%d+"), v)
+				end
+			end
+			notification.title = string.format("Temp (%0.f°C)", state.avg)
+			notification.message = table.concat(lines, "\n")
+		end)
+	)
+end)
 
 local function battery_icon(perc)
 	if perc > 95 then
@@ -566,44 +850,111 @@ local function battery_icon(perc)
 	end
 end
 
+---@param seconds integer
+---@return string
+local function format_time(seconds)
+	local minutes = math.floor(seconds / 60)
+	local hours = math.floor(minutes / 60 + 0.5)
+	if hours >= 3 then
+		return string.format("%d hr", hours)
+	end
+	if hours == 0 then
+		return string.format("%d min", minutes)
+	end
+	return string.format("%d:%02d", hours, minutes % 60)
+end
+
 -- Battery
-local bat = lain.widget.bat({
-	settings = function()
-		---@diagnostic disable-next-line: undefined-global
-		local bat_now = bat_now
-		if bat_now.status and bat_now.status ~= "N/A" then
-			if bat_now.ac_status == 1 then
-				widget:set_markup(markup.font(theme.font, " AC"))
-				return
-			end
-			widget:set_markup(markup.font(theme.font, battery_icon(bat_now.perc) .. " " .. bat_now.perc .. "%"))
-		else
-			widget:set_markup("󱧥 ...")
-		end
-	end,
+local battery_widget = wibox.widget({
+	text = "󱧥 …",
+	font = theme.font,
+	widget = wibox.widget.textbox,
 })
+bat:subscribe(function(state)
+	if state.ac_online then
+		local markup = " AC"
+		if state.status == bat.BatteryStatus.Charging and not state.charge_controlled then
+			markup = string.format("%s (%s)", markup, format_time(bat.time_until_full() or 0))
+		end
+		battery_widget:set_markup(markup)
+	else
+		battery_widget:set_markup(
+			string.format("%s %d%% (%s)", battery_icon(state.perc), state.perc, format_time(bat.time_remaining() or 0))
+		)
+	end
+end)
+attach_notification_to(battery_widget, function(notification)
+	notification:connect_signal(
+		"destroyed",
+		bat:subscribe(function(state)
+			notification.title = string.format("%s%% (%s)", state.perc, state.status)
+			local lines = {}
+			if state.status == bat.BatteryStatus.Charging then
+				lines[#lines + 1] = format_time(bat.time_until_full() or 0) .. " until full"
+				if state.charge_controlled then
+					lines[#lines + 1] = "󱞜 Charge controlled"
+				end
+			elseif state.status == bat.BatteryStatus.Discharging then
+				lines[#lines + 1] = format_time(bat.time_remaining() or 0) .. " remaining"
+			end
+			lines[#lines + 1] = "AC: " .. (state.ac_online and "Online" or "Offline")
+			if state.capacity then
+				lines[#lines + 1] = string.format("Health: %d%%", state.capacity)
+			end
+			notification.message = table.concat(lines, "\n")
+		end)
+	)
+end)
 
 -- Net
-local neticon = wibox.widget.imagebox(theme.widget_net)
-local net = lain.widget.net({
-	settings = function()
-		---@diagnostic disable-next-line: undefined-global
-		local net_now = net_now
-		widget:set_markup(markup.fontfg(theme.font, palette.white, net_now.received .. " ↓↑ " .. net_now.sent))
-	end,
+local net_widget = wibox.widget({
+	text = "󱛄 0.0 ↓↑ 0.0",
+	font = theme.font,
+	widget = wibox.widget.textbox,
 })
-
---[[ Brigtness
-local brighticon = wibox.widget.imagebox(theme.widget_brightness)
--- If you use xbacklight, comment the line with "light -G" and uncomment the line bellow
-local brightwidget = awful.widget.watch('xbacklight -get', 0.1,
-    -- local brightwidget = awful.widget.watch('light -G', 0.1,
-    ---@diagnostic disable-next-line: unused-local
-    function(widget, stdout, stderr, exitreason, exitcode)
-        local brightness_level = tonumber(string.format("%.0f", stdout))
-        widget:set_markup(markup.font(theme.font, " " .. brightness_level .. "%"))
-    end)
-]]
+net:subscribe(function(state)
+	local icon = "󰤮"
+	for _, c in pairs(state.devices) do
+		if c.state == net.DeviceState.Up and c.carrier then
+			if c.wifi then
+				icon = c.signal == nil and "󰖩"
+					or c.signal >= -50 and "󰤨"
+					or c.signal >= -67 and "󰤥"
+					or c.signal >= -73 and "󰤢"
+					or c.signal >= -80 and "󰤟"
+					or "󰤫"
+			else
+				icon = "󰈀"
+			end
+			break
+		end
+	end
+	net_widget:set_markup(
+		string.format("%s %s ↓↑ %s", icon, format_bytes(state.rx_rate), format_bytes(state.tx_rate))
+	)
+end)
+attach_notification_to(net_widget, function(notification)
+	notification:connect_signal(
+		"destroyed",
+		net:subscribe(function(state)
+			local carrier
+			for _, c in pairs(state.devices) do
+				if c.state == net.DeviceState.Up and c.carrier then
+					carrier = c
+					break
+				end
+			end
+			notification.message = table.concat({
+				carrier and carrier.wifi and ("Signal: " .. (carrier.signal and (carrier.signal .. "dBm") or "N/A"))
+					or "LAN",
+				string.format("RX: %s/s", format_bytes(state.rx_rate)),
+				string.format("TX: %s/s", format_bytes(state.tx_rate)),
+				string.format("RX: %s", format_bytes(carrier.rx_bytes)),
+				string.format("TX: %s", format_bytes(carrier.tx_bytes)),
+			}, "\n")
+		end)
+	)
+end, { title = "Network" })
 
 function theme.gutter_start(cr, width, height, depth)
 	local arrow_depth, offset = depth or height / 2, 0
@@ -648,20 +999,19 @@ function theme.slab(cr, width, height)
 end
 
 ---@class Segment
----@field widget AwesomeWidget
----@field background? HexColor
----@field color? HexColor
----@field margin? integer
----@field callback? fun(widget: AwesomeWidget)
+---@field widget AwesomeWidget                 The widget to display.
+---@field background? HexColor                 Forced background color of the segment.
+---@field color? HexColor                      Forced foreground color of the segment.
+---@field callback? fun(widget: AwesomeWidget) Callback to mutate the resulting widget, eg, add buttons.
 
 --- Expands a segment into a list of widgets and its powerline seperator.
----@param segment Segment
+---@param segment Segment|AwesomeWidget
 ---@param bg_color HexColor
 ---@return AwesomeWidget[]
-local function expand_segment(segment, bg_color, margin)
+local function expand_segment(segment, bg_color)
 	local widget = segment.widget or segment
 	local container = wibox.container.background(
-		wibox.container.margin(widget, dpi(margin or 16), dpi(margin or 16)),
+		wibox.container.margin(widget, dpi(16), dpi(16)),
 		gradient(bg_color, theme.wibox_height),
 		function(cr, width, height)
 			shape.powerline(cr, width, height, 0 - height / 2)
@@ -688,68 +1038,56 @@ end
 
 ---@type Segment[]
 local segments = {
-	--[[
-    {
-        widget = wibox.container.margin(
-            wibox.widget { mailicon, theme.mail and theme.mail.widget, layout = wibox.layout.align.horizontal }, dpi(4),
-            dpi(7)),
-    },
-    ]]
+	{
+		widget = wibox.widget({ net_widget, layout = wibox.layout.align.horizontal }),
+		background = palette.fg_2,
+	},
 	{
 		widget = wibox.widget.systray(),
 		background = palette.bg_3,
 	},
 	{
-		widget = wibox.widget({ mpdicon, theme.mpd.widget, layout = wibox.layout.align.horizontal }),
-	},
-	{
 		widget = task,
 	},
 	{
-		widget = wibox.widget({ mem.widget, layout = wibox.layout.align.horizontal }),
+		widget = wibox.widget({ mem_widget, layout = wibox.layout.align.horizontal }),
 		color = palette.orange,
 	},
 	{
-		widget = wibox.widget({ cpu.widget, layout = wibox.layout.align.horizontal }),
+		widget = wibox.widget({ cpu_widget, layout = wibox.layout.align.horizontal }),
 		color = palette.green,
 	},
 	{
-		widget = wibox.widget({ temp.widget, layout = wibox.layout.align.horizontal }),
+		widget = wibox.widget({ temp_widget, layout = wibox.layout.align.horizontal }),
 		color = palette.purple,
 	},
-	--[[
-    {
-        widget = wibox.widget { theme.fs and theme.fs.widget, layout = wibox.layout.align.horizontal },
-        color = palette.orange
-    },
-    ]]
 	{
 		widget = volume_icon,
 		color = palette.yellow,
 		callback = function(w)
 			w:buttons(awful.button({}, 1, function()
 				volume_widget_geo = mouse.current_widget_geometry
-				if volume_popup and volume_popup_mode == "change" then
+				if (volume_popup or volume_notification) and volume_popup_mode == "change" then
 					hide_volume_popup()
 				end
 				if volume_popup then
 					hide_volume_popup()
 				else
 					show_volume_popup("button")
+					volume_hide_timer:stop()
 				end
 			end))
+			w:connect_signal("mouse::leave", function()
+				volume_hide_timer:again()
+			end)
 		end,
 	},
 	{
-		widget = wibox.widget({ bat.widget, layout = wibox.layout.align.horizontal }),
+		widget = wibox.widget({ battery_widget, layout = wibox.layout.align.horizontal }),
 		color = palette.cyan,
 	},
 	{
-		widget = wibox.widget({ neticon, net.widget, layout = wibox.layout.align.horizontal }),
-		background = palette.fg_2,
-	},
-	{
-		widget = binclock,
+		widget = clock,
 		background = palette.bg_3,
 	},
 }
@@ -758,267 +1096,7 @@ local function color_from_index(i)
 	return i % 2 == 0 and palette.bg_2 or palette.bg
 end
 
--- {{{ Alttab UI
-do
-	local cairo = require("lgi").cairo
-
-	local LIST_WIDTH = dpi(260)
-	local PREVIEW_WIDTH = dpi(480)
-	local PREVIEW_HEIGHT = dpi(270)
-	local ITEM_HEIGHT = dpi(40)
-	local ICON_SIZE = dpi(24)
-	local MINI_ICON_SIZE = dpi(64)
-	local PADDING = dpi(8)
-
-	local BG_COLOR = palette.bg_2 .. "CC"
-	local SELECTED_BG_COLOR = palette.bg_3
-	local SELECTED_FG_COLOR = palette.blue
-
-	---@type table<AwesomeClient, CairoContext>  Cached ImageSurfaces keyed by client.
-	local preview_cache = {}
-
-	--- Capture a client's current content into the cache and return the image.
-	--- Returns nil if the content is unavailable.
-	---@param c AwesomeClient
-	---@return CairoContext|nil
-	local function capture(c)
-		if c.minimized or c.hidden then
-			return nil
-		end
-		---@diagnostic disable-next-line: param-type-mismatch
-		local ok, surf = pcall(gears.surface, c.content)
-		if not ok or not surf then
-			return nil
-		end
-		local geom = c:geometry()
-		if geom.width <= 0 or geom.height <= 0 then
-			return nil
-		end
-		local img = cairo.ImageSurface.create(cairo.Format.ARGB32, geom.width, geom.height)
-		local cr = cairo.Context.create(img)
-		cr:set_source_surface(surf, 0, 0)
-		cr:paint()
-		preview_cache[c] = img
-		return img
-	end
-
-	---@type AlttabAPI|nil
-	local api = nil
-
-	---@type table<integer, AwesomeWidget>  Background containers for each list item.
-	local item_bgs = {}
-	---@type AwesomeWidget|nil  Right-panel background container.
-	local preview_bg = nil
-	---@type table|nil
-	local popup = nil
-	---@type AwesomeClient[]|nil
-	local current_clients = nil
-	---@type integer|nil
-	local current_index = nil
-
-	---@param c AwesomeClient
-	---@param index integer
-	---@param selected boolean
-	---@return AwesomeWidget
-	local function make_item(c, index, selected)
-		local item = wibox.widget({
-			{
-				{
-					{
-						image = c.icon,
-						resize = true,
-						forced_width = ICON_SIZE,
-						forced_height = ICON_SIZE,
-						widget = wibox.widget.imagebox,
-					},
-					{
-						text = c.name or "?",
-						forced_width = LIST_WIDTH - ICON_SIZE - dpi(24),
-						ellipsize = "end",
-						widget = wibox.widget.textbox,
-					},
-					spacing = dpi(8),
-					layout = wibox.layout.fixed.horizontal,
-				},
-				margins = dpi(8),
-				widget = wibox.container.margin,
-			},
-			bg = selected and SELECTED_BG_COLOR or "#00000000",
-			fg = selected and SELECTED_FG_COLOR or palette.fg,
-			forced_height = ITEM_HEIGHT,
-			widget = wibox.container.background,
-		})
-
-		item:connect_signal("mouse::enter", function()
-			if api then
-				api.select(index)
-			end
-		end)
-		item:connect_signal("button::press", function(_, _, _, button)
-			if not api then
-				return
-			end
-			if button == 1 then
-				api.close_session(true)
-			elseif button == 3 then
-				api.close_session(false)
-			end
-		end)
-
-		return item
-	end
-
-	---@param c AwesomeClient
-	---@return AwesomeWidget
-	local function make_preview_inner(c)
-		---@type CairoContext|nil
-		local img = not c:isvisible() and preview_cache[c] or c:isvisible() and capture(c) or nil
-		if not img then
-			return wibox.widget({
-				nil,
-				{
-					nil,
-					{
-						image = c.icon,
-						resize = true,
-						forced_width = MINI_ICON_SIZE,
-						forced_height = MINI_ICON_SIZE,
-						widget = wibox.widget.imagebox,
-					},
-					nil,
-					expand = "none",
-					layout = wibox.layout.align.horizontal,
-				},
-				nil,
-				expand = "none",
-				layout = wibox.layout.align.vertical,
-			})
-		else
-			local iw = img:get_width()
-			local ih = img:get_height()
-			local scale = math.min(PREVIEW_WIDTH / iw, PREVIEW_HEIGHT / ih)
-			return wibox.widget({
-				{
-					image = img,
-					resize = true,
-					forced_width = math.floor(iw * scale),
-					forced_height = math.floor(ih * scale),
-					widget = wibox.widget.imagebox,
-				},
-				halign = "center",
-				valign = "center",
-				forced_width = PREVIEW_WIDTH,
-				forced_height = PREVIEW_HEIGHT,
-				widget = wibox.container.place,
-			})
-		end
-	end
-
-	---@param c AwesomeClient
-	local function set_preview(c)
-		preview_bg.bg = palette.black .. "55"
-		preview_bg.widget = make_preview_inner(c)
-	end
-
-	---@param clients AwesomeClient[]
-	---@param index integer
-	local function build_popup(clients, index)
-		item_bgs = {}
-
-		local list = wibox.widget({ layout = wibox.layout.fixed.vertical })
-		for i, c in ipairs(clients) do
-			local item = make_item(c, i, i == index)
-			item_bgs[i] = item
-			list:add(item)
-		end
-
-		preview_bg = wibox.widget({
-			forced_width = PREVIEW_WIDTH,
-			forced_height = PREVIEW_HEIGHT,
-			widget = wibox.container.background,
-		})
-		set_preview(clients[index])
-
-		popup = awful.popup({
-			widget = {
-				{
-					{
-						list,
-						strategy = "exact",
-						width = LIST_WIDTH,
-						widget = wibox.container.constraint,
-					},
-					preview_bg,
-					spacing = PADDING,
-					layout = wibox.layout.fixed.horizontal,
-				},
-				margins = PADDING,
-				widget = wibox.container.margin,
-			},
-			bg = BG_COLOR,
-			border_width = dpi(2),
-			border_color = palette.bg_3,
-			placement = awful.placement.centered,
-			ontop = true,
-			visible = true,
-		})
-	end
-
-	---@type AlttabUI
-	theme.alttab = {
-		show = function(clients, index)
-			current_clients = clients
-			current_index = index
-			build_popup(clients, index)
-		end,
-		update = function(index)
-			if not current_clients then
-				return
-			end
-			if item_bgs[current_index] then
-				item_bgs[current_index].bg = "00000000"
-				item_bgs[current_index].fg = palette.fg
-			end
-			current_index = index
-			if item_bgs[index] then
-				item_bgs[index].bg = SELECTED_BG_COLOR
-				item_bgs[index].fg = SELECTED_FG_COLOR
-			end
-			set_preview(current_clients[index])
-		end,
-		hide = function()
-			if popup then
-				popup.visible = false
-				popup = nil
-			end
-			item_bgs = {}
-			preview_bg = nil
-			current_clients = nil
-			current_index = nil
-		end,
-		on_init = function(a)
-			api = a
-		end,
-		on_unfocus = capture,
-		on_untagged = capture,
-		on_tag_selected = function(t)
-			if not t.selected then
-				for _, c in pairs(t:clients()) do
-					capture(c)
-				end
-			end
-		end,
-		on_unmanage = function(c)
-			preview_cache[c] = nil
-		end,
-	}
-end
--- }}}
-
 function theme.at_screen_connect(s)
-	-- Quake application
-	s.quake = lain.util.quake({ app = awful.util.terminal })
-
 	-- If wallpaper is a function, call it with the screen
 	local wallpaper = theme.wallpaper
 	if type(wallpaper) == "function" then
@@ -1035,7 +1113,7 @@ function theme.at_screen_connect(s)
 	-- Create an imagebox widget which will contains an icon indicating which layout we're using.
 	-- We need one layoutbox per screen.
 	s.mylayoutbox = awful.widget.layoutbox(s)
-	s.mylayoutbox:buttons(my_table.join(
+	s.mylayoutbox:buttons(gears.table.join(
 		awful.button({}, 1, function()
 			awful.layout.inc(1)
 		end),
@@ -1056,8 +1134,8 @@ function theme.at_screen_connect(s)
 	-- Add global widgets to this screen.
 	for i, segment in ipairs(segments) do
 		local this_color = segment.background or color_from_index(i)
-		for _, x in ipairs(expand_segment(segment, this_color, segment.margin)) do
-			table.insert(powerline, x)
+		for _, x in ipairs(expand_segment(segment, this_color)) do
+			powerline[#powerline + 1] = x
 		end
 	end
 	-- Add screen layout to this screen.
@@ -1083,13 +1161,11 @@ function theme.at_screen_connect(s)
 		screen = s,
 		filter = awful.widget.taglist.filter.all,
 		style = {
-			shape_border_width = dpi(2),
-			shape_border_color = gradient(palette.bg, theme.wibox_height),
 			shape = theme.slab,
 		},
 		buttons = awful.util.taglist_buttons,
 		layout = {
-			spacing = -dpi(10),
+			spacing = -dpi(5),
 			layout = wibox.layout.fixed.horizontal,
 		},
 		widget_template = {
@@ -1101,15 +1177,14 @@ function theme.at_screen_connect(s)
 					},
 					layout = wibox.layout.fixed.horizontal,
 				},
-				left = 14,
-				right = 14,
+				left = 12,
+				right = 12,
 				widget = wibox.container.margin,
 			},
 			id = "background_role",
 			widget = wibox.container.background,
 			-- Add support for hover colors and an index label
-			---@diagnostic disable-next-line: unused-local
-			create_callback = function(self, c3, index, objects) --luacheck: no unused args
+			create_callback = function(self, _, _, _)
 				self:connect_signal("mouse::enter", function()
 					if self.shape_border ~= palette.bg_3 then
 						self.backup = self.bg
@@ -1168,7 +1243,7 @@ function theme.at_screen_connect(s)
 				self:connect_signal("mouse::enter", function()
 					self.backup = self.shape_border_color
 					self.has_backup = true
-					self.shape_border_color = lighten(self.shape_border_color, 30)
+					self.shape_border_color = colors.lighten(self.shape_border_color, 30)
 				end)
 				self:connect_signal("mouse::leave", function()
 					if self.has_backup then
@@ -1189,37 +1264,42 @@ function theme.at_screen_connect(s)
 	})
 
 	local menu_button = wibox.container.margin(wibox.widget.imagebox(theme.awesome_icon), dpi(2), dpi(2))
-	menu_button:buttons(my_table.join(
-		awful.widget.button():buttons(),
-		awful.button({}, 1, nil, function()
-			awful.util.mymainmenu:toggle()
-		end)
-	))
+	menu_button:buttons(awful.button({}, 1, nil, function()
+		awful.util.mymainmenu:toggle()
+	end))
 
 	-- Add widgets to the wibox
 	-- There is some weird nonsense with nested fixed layouts when the inner has
 	-- negative spacing so we have to structure this a little oddly.
 	s.mywibox:setup({
-		layout = wibox.layout.align.horizontal,
-		{ -- Middle widget
-			layout = wibox.layout.align.horizontal,
+		{ -- Left widget
 			{
 				layout = wibox.layout.fixed.horizontal,
 				wibox.container.background(menu_button, gradient(palette.red, theme.wibox_height)),
 			},
 			wibox.container.background( -- Left widget
-				wibox.container.margin(s.mytaglist, dpi(0), dpi(12)),
+				wibox.container.margin(
+					wibox.container.background(
+						wibox.container.margin(s.mytaglist, dpi(3), dpi(3), dpi(2), dpi(2)),
+						gradient(palette.bg, theme.wibox_height),
+						theme.slab
+					),
+					dpi(0),
+					dpi(12)
+				),
 				gradient(palette.red, theme.wibox_height),
 				theme.gutter_start
 			),
+			layout = wibox.layout.align.horizontal,
 		},
 		{ -- Middle widget
-			layout = wibox.layout.align.horizontal,
 			s.mypromptbox,
 			wibox.container.margin(s.mytasklist, dpi(12), dpi(12), dpi(1), dpi(1)),
+			layout = wibox.layout.align.horizontal,
 		},
 		-- Right widget
 		powerline,
+		layout = wibox.layout.align.horizontal,
 	})
 end
 

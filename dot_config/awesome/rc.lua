@@ -8,7 +8,7 @@ require("awful.autofocus")
 require("awful.hotkeys_popup.keys")
 
 ---@diagnostic disable-next-line: undefined-global
-local awesome, client, screen = awesome, client, screen
+local awesome, client, screen, root, tag = awesome, client, screen, root, tag
 
 local gears = require("gears")
 local awful = require("awful")
@@ -17,21 +17,36 @@ local beautiful = require("beautiful")
 local naughty = require("naughty")
 local menubar = require("menubar")
 local lain = require("lain")
--- local menubar                 = require("menubar")
+local ruled = require("ruled")
 local freedesktop = require("freedesktop")
 local hotkeys_popup = require("awful.hotkeys_popup")
-local alttab = require("themes.qubit.alttab")
-local mytable = awful.util.table or gears.table -- 4.{0,1} compatibility
+local alttab = require("continuity.alttab")
+local media = require("continuity.media")
+local mytable = gears.table
+
+local checkhealth = require("themes.qubit.checkhealth")
+local audio = require("continuity.audio")
+local backlight = require("continuity.backlight")
+
+require("continuity.sysinfo.bat").setup()
+require("continuity.sysinfo.temp").setup()
+require("continuity.sysinfo.cpu").setup()
+require("continuity.sysinfo.mem").setup()
+require("continuity.sysinfo.net").setup()
+audio.setup()
+backlight.setup({
+	backend = require("continuity.backlight.backends.acpilight")(),
+})
 
 -- {{{ Error handling
 
 -- Check if awesome encountered an error during startup and fell back to
 -- another config (This code will only ever execute for the fallback config)
 if awesome.startup_errors then
-	naughty.notify({
+	naughty.notification({
 		preset = naughty.config.presets.critical,
 		title = "Oops, there were errors during startup!",
-		text = awesome.startup_errors,
+		message = awesome.startup_errors,
 	})
 end
 
@@ -46,15 +61,42 @@ do
 
 		in_error = true
 
-		naughty.notify({
+		naughty.notification({
 			preset = naughty.config.presets.critical,
 			title = "Oops, an error happened!",
-			text = tostring(err),
+			message = tostring(err),
 		})
 
 		in_error = false
 	end)
 end
+
+-- }}}
+
+-- {{{ Naughty config
+
+-- Strip inline image data from D-Bus notifications before processing.
+-- The image-data hint triggers a code path in naughty/dbus.lua that uses
+-- lgi's GLib.Variant byte-array accessor, which crashes under LuaJIT's JIT
+-- compiler.  Setting the keys to false on the hints proxy table shadows lgi's
+-- __index lookup so the image processing block is skipped entirely.
+--
+-- This looks to have been fixed now that awesome is built against the correct
+-- glib version, but is left here for reference.
+--
+-- Signature: (legacy_data, appname, replaces_id, app_icon, title, text,
+--[[             actions, hints, expire) — return truthy to allow, nil to reject.
+if jit then
+	naughty.config.defaults.callback = function(_, _, _, _, _, _, _, hints, _)
+		if hints["icon_data"] or hints["image_data"] or hints["image-data"] then
+			--hints["icon_data"] = false
+			--hints["image_data"] = false
+			hints["image-data"] = false
+		end
+		return true
+	end
+end
+]]
 
 -- }}}
 
@@ -68,15 +110,18 @@ end
 
 run_once({
 	-- Run window compositer
-	"picom -b --experimental-backends",
+	"picom -b",
 	-- Set screen timout
 	"xset s 120 180",
 	-- Run xss-lock pointed to the lock script
 	"xss-lock --transfer-sleep-lock -n dim-screen.sh -- lock",
 	-- Blue filter
-	"redshift-gtk",
+	-- "redshift-gtk",
 	-- Pre-load quick-access-terminal
-	'kitten quick-access-terminal -o start_as_hidden=yes kitten run-shell zsh -c "neofetch;eza --color=always --icons=always --classify=always --group-directories-first -w=999 -D"',
+	-- 'kitten quick-access-terminal -o start_as_hidden=yes kitten run-shell zsh -c "neofetch;eza --color=always --icons=always --classify=always --group-directories-first -w=999 -D"',
+	"xsettingsd",
+	-- Network manager systray applet (not auto-started by COSMIC session)
+	"nm-applet",
 })
 
 -- This function implements the XDG autostart specification
@@ -102,7 +147,7 @@ local browser = "luakit"
 
 awful.util.terminal = terminal
 awful.util.tagnames = { "1", "2", "3", "4", "5" }
-awful.layout.layouts = {
+awful.layout.append_default_layouts({
 	awful.layout.suit.tile,
 	awful.layout.suit.tile.left,
 	awful.layout.suit.tile.bottom,
@@ -125,7 +170,7 @@ awful.layout.layouts = {
 	--lain.layout.centerwork.horizontal,
 	--lain.layout.termfair,
 	--lain.layout.termfair.center
-}
+})
 
 lain.layout.termfair.nmaster = 3
 lain.layout.termfair.ncol = 1
@@ -179,14 +224,21 @@ awful.util.tasklist_buttons = mytable.join(
 	end)
 )
 
-beautiful.init(os.getenv("HOME") .. "/.config/awesome/themes/qubit/theme.lua")
+beautiful.init(require("themes.qubit.theme"))
+
+-- {{ Media
+media.setup({
+	notifications = {
+		notify_callback = require("themes.qubit.media_notification"),
+	},
+})
+--}}
 
 -- {{{ Alttab
-alttab.setup({ ui = beautiful.alttab })
+alttab.setup({ ui = require("themes.qubit.alttab") })
 -- }}}
 
 -- {{{ Menu
-
 -- Create a launcher widget and a main menu
 local myawesomemenu = {
 	{
@@ -237,11 +289,9 @@ end)
 
 -- Set the Menubar terminal for applications that require it
 --menubar.utils.terminal = terminal
-
 -- }}}
 
 -- {{{ Screen
-
 -- Re-set wallpaper when a screen's geometry changes (e.g. different resolution)
 screen.connect_signal("property::geometry", function(s)
 	-- Wallpaper
@@ -343,15 +393,12 @@ end)
 -- Desktop notifications config
 beautiful.notification_shape = gears.shape.rounded_rect
 beautiful.notification_font = "Terminus 10"
-beautiful.notification_opacity = 0.7
 beautiful.notification_max_width = 400
 beautiful.notification_max_height = 150
 beautiful.notification_icon_size = 100
-
 -- }}}
 
 -- {{{ Mouse bindings
-
 root.buttons(mytable.join(
 	awful.button({}, 3, function()
 		awful.util.mymainmenu:toggle()
@@ -359,12 +406,15 @@ root.buttons(mytable.join(
 	awful.button({}, 4, awful.tag.viewnext),
 	awful.button({}, 5, awful.tag.viewprev)
 ))
-
 -- }}}
 
 -- {{{ Key bindings
+local globalkeys = mytable.join(
+	-- Checkhealth
+	awful.key({ modkey, "Control" }, "h", function()
+		checkhealth:popup()
+	end, { description = "Show checkhealth", group = "awesome" }),
 
-globalkeys = mytable.join(
 	-- Alttab
 	awful.key({ altkey }, "Tab", function()
 		alttab.switch(1)
@@ -542,11 +592,6 @@ globalkeys = mytable.join(
 		end
 	end, { description = "restore minimized", group = "client" }),
 
-	-- Dropdown application
-	awful.key({ modkey }, "z", function()
-		awful.screen.focused().quake:toggle()
-	end, { description = "dropdown application", group = "launcher" }),
-
 	-- Widgets popups
 	-- awful.key({ altkey, }, "c", function () if beautiful.cal then beautiful.cal.show(7) end end,
 	-- {description = "show calendar", group = "widgets"}),
@@ -567,63 +612,38 @@ globalkeys = mytable.join(
 
 	-- Screen brightness
 	awful.key({}, "XF86MonBrightnessUp", function()
-		os.execute("xbacklight -inc 10")
+		backlight.primary_display:adjust(2)
+		-- os.execute("xbacklight -inc 10")
 	end, { description = "+10%", group = "hotkeys" }),
 	awful.key({}, "XF86MonBrightnessDown", function()
-		os.execute("xbacklight -dec 10")
+		backlight.primary_display:adjust(-2)
+		-- os.execute("xbacklight -dec 10")
 	end, { description = "-10%", group = "hotkeys" }),
 
 	-- ALSA volume control
 	awful.key({}, "XF86AudioRaiseVolume", function()
-		if beautiful.volume then
-			beautiful.volume:adjust_perc(5)
-		else
-			os.execute("amixer -q set Master 5%+ on")
-		end
+		audio.Volume:adjust_perc(5)
 	end, { description = "volume up", group = "hotkeys" }),
 	awful.key({}, "XF86AudioLowerVolume", function()
-		if beautiful.volume then
-			beautiful.volume:adjust_perc(-5)
-		else
-			os.execute("amixer -q set Master 5%- on")
-		end
+		audio.Volume:adjust_perc(-5)
 	end, { description = "volume down", group = "hotkeys" }),
 	awful.key({}, "XF86AudioMute", function()
-		if beautiful.volume then
-			beautiful.volume:toggle_mute()
-		else
-			os.execute("amixer -q set Master toggle")
-		end
+		audio.Volume:toggle_mute()
 	end, { description = "toggle mute", group = "hotkeys" }),
 
-	-- MPD control
+	-- Media control
 	awful.key({ altkey, "Control" }, "Up", function()
-		os.execute("mpc toggle")
-		beautiful.mpd.update()
-	end, { description = "mpc toggle", group = "widgets" }),
+		media.play_pause()
+	end, { description = "Toggle media player", group = "widgets" }),
 	awful.key({ altkey, "Control" }, "Down", function()
-		os.execute("mpc stop")
-		beautiful.mpd.update()
-	end, { description = "mpc stop", group = "widgets" }),
+		media.stop()
+	end, { description = "Stop media player", group = "widgets" }),
 	awful.key({ altkey, "Control" }, "Left", function()
-		os.execute("mpc prev")
-		beautiful.mpd.update()
-	end, { description = "mpc prev", group = "widgets" }),
+		media.previous()
+	end, { description = "Previous media track", group = "widgets" }),
 	awful.key({ altkey, "Control" }, "Right", function()
-		os.execute("mpc next")
-		beautiful.mpd.update()
-	end, { description = "mpc next", group = "widgets" }),
-	awful.key({ altkey }, "0", function()
-		local common = { text = "MPD widget ", position = "top_middle", timeout = 2 }
-		if beautiful.mpd.timer.started then
-			beautiful.mpd.timer:stop()
-			common.text = common.text .. lain.util.markup.bold("OFF")
-		else
-			beautiful.mpd.timer:start()
-			common.text = common.text .. lain.util.markup.bold("ON")
-		end
-		naughty.notify(common)
-	end, { description = "mpc on/off", group = "widgets" }),
+		media.next()
+	end, { description = "Next media track", group = "widgets" }),
 
 	-- Copy primary to clipboard (terminals to gtk)
 	awful.key({ modkey }, "c", function()
@@ -670,13 +690,13 @@ globalkeys = mytable.join(
 			prompt = "Run Lua code: ",
 			textbox = awful.screen.focused().mypromptbox.widget,
 			exe_callback = awful.util.eval,
-			history_path = awful.util.get_cache_dir() .. "/history_eval",
+			history_path = gears.filesystem.get_cache_dir() .. "/history_eval",
 		})
 	end, { description = "lua execute prompt", group = "awesome" })
 	--]]
 )
 
-clientkeys = mytable.join(
+local clientkeys = mytable.join(
 	awful.key({ altkey, "Shift" }, "m", lain.util.magnify_client, { description = "magnify client", group = "client" }),
 	awful.key({ modkey }, "f", function(c)
 		c.fullscreen = not c.fullscreen
@@ -728,40 +748,40 @@ for i = 1, 9 do
 		globalkeys,
 		-- View tag only.
 		awful.key({ modkey }, "#" .. i + 9, function()
-			local tag = awful.screen.focused().tags[i]
-			if tag then
-				tag:view_only()
+			local t = awful.screen.focused().tags[i]
+			if t then
+				t:view_only()
 			end
 		end, { description = "view tag #" .. i, group = "tag" }),
 		-- Toggle tag display.
 		awful.key({ modkey, "Control" }, "#" .. i + 9, function()
-			local tag = awful.screen.focused().tags[i]
-			if tag then
-				awful.tag.viewtoggle(tag)
+			local t = awful.screen.focused().tags[i]
+			if t then
+				awful.tag.viewtoggle(t)
 			end
 		end, { description = "toggle tag #" .. i, group = "tag" }),
 		-- Move client to tag.
 		awful.key({ modkey, "Shift" }, "#" .. i + 9, function()
 			if client.focus then
-				local tag = client.focus.screen.tags[i]
-				if tag then
-					client.focus:move_to_tag(tag)
+				local t = client.focus.screen.tags[i]
+				if t then
+					client.focus:move_to_tag(t)
 				end
 			end
 		end, { description = "move focused client to tag #" .. i, group = "tag" }),
 		-- Toggle tag on focused client.
 		awful.key({ modkey, "Control", "Shift" }, "#" .. i + 9, function()
 			if client.focus then
-				local tag = client.focus.screen.tags[i]
-				if tag then
-					client.focus:toggle_tag(tag)
+				local t = client.focus.screen.tags[i]
+				if t then
+					client.focus:toggle_tag(t)
 				end
 			end
 		end, { description = "toggle focused client on tag #" .. i, group = "tag" })
 	)
 end
 
-clientbuttons = mytable.join(
+local clientbuttons = mytable.join(
 	awful.button({}, 1, function(c)
 		c:emit_signal("request::activate", "mouse_click", { raise = true })
 	end),
@@ -777,20 +797,20 @@ clientbuttons = mytable.join(
 
 -- Set keys
 root.keys(globalkeys)
-
 -- }}}
 
 -- {{{ Rules
-
 -- Rules to apply to new clients (through the "manage" signal).
-awful.rules.rules = {
+ruled.client.rules = {
 	-- All clients will match this rule.
 	{
 		rule = {},
 		properties = {
 			border_width = beautiful.border_width,
 			border_color = beautiful.border_normal,
-			callback = awful.client.setslave,
+			callback = function(c)
+				c:to_secondary_section()
+			end,
 			focus = awful.client.focus.filter,
 			raise = true,
 			keys = clientkeys,
@@ -851,11 +871,9 @@ awful.rules.rules = {
 		properties = { opacity = 1, maximized = false, floating = false, screen = 1, tag = "2" },
 	},
 }
-
 -- }}}
 
 -- {{{ Signals
-
 -- Signal function to execute when a new client appears.
 client.connect_signal("manage", function(c)
 	-- Set the windows at the slave,
@@ -943,9 +961,62 @@ client.connect_signal("property::minimized", backham)
 client.connect_signal("unmanage", backham)
 -- ensure there is always a selected client during tag switching or logins
 tag.connect_signal("property::selected", backham)
-
 -- }}}
 
-beautiful.useless_gap = 2
-beautiful.gap_single_client = false
-beautiful.bg_systray = "#464442"
+-- Battery level notifications.
+do
+	local bat = require("continuity.sysinfo.bat")
+
+	---@type BatteryStatus|nil
+	local last_status
+	local low_notified = false
+	local critical_notified = false
+	local full_notified = false
+	local control_notified = false
+	local critical_notification
+	bat:subscribe(function(state)
+		if state.status ~= last_status then
+			last_status = state.status
+			low_notified, critical_notified, full_notified, control_notified = false, false, false, false
+		end
+		if state.status == bat.BatteryStatus.Discharging then
+			if state.perc <= 15 and not low_notified then
+				low_notified = true
+				naughty.notify({
+					title = "Battery Low",
+					text = "Plug in the cable!",
+					timeout = 15,
+					screen = mouse.screen,
+				})
+			elseif state.perc <= 5 and not critical_notified then
+				critical_notified = true
+				critical_notification = naughty.notify({
+					title = "Battery Critical",
+					text = "Shutdown imminent",
+					screen = mouse.screen,
+					preset = naughty.config.presets.critical,
+				})
+			end
+		elseif state.status == bat.BatteryStatus.Charging then
+			if critical_notification then
+				critical_notification:destroy()
+				critical_notification = nil
+			end
+			if state.perc >= 99 and not full_notified then
+				full_notified = true
+				naughty.notify({
+					title = "Battery Full",
+					text = "You can unplug the cable",
+					screen = mouse.screen,
+				})
+			elseif state.charge_controlled and not control_notified then
+				control_notified = true
+				naughty.notify({
+					title = "Charge Controlled",
+					text = "Battery now being charge controlled",
+					screen = mouse.screen,
+				})
+			end
+		end
+	end)
+end

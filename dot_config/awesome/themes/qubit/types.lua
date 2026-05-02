@@ -1,0 +1,12 @@
+-- Shared AwesomeWM runtime type aliases.
+-- This file has no runtime behaviour; it exists solely for EmmyLua annotation side-effects.
+
+---@alias AwesomeWidget         table  -- wibox widget tree
+---@alias AwesomeWidgetTemplate table  -- naughty widget_template tree (distinct from wibox widget)
+---@alias AwesomePopup          table  -- naughty popup
+---@alias CairoContext          table  -- cairo drawing context
+---@alias ImageSurface          table  -- cairo image surface
+---@alias AwesomeClient         table  -- awful.client object
+---@alias AwesomeTag            table  -- awful.tag object
+---@alias AwesomeScreen         table  -- awful.screen object
+---@alias NaughtyNotification   table  -- naughty.notification object
